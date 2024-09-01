@@ -31,7 +31,7 @@ class BinaryCrossEntropy(Loss):
             if self.come_from_logits:
                 predictions = _logits_to_probabilities(predictions)
             predictions = _clip_predictions_in_given_range(predictions)
-            return -np.mean(ground_truth*xp.log(predictions)+(1-ground_truth)*xp.log(1-predictions))
+            return -xp.mean(ground_truth*xp.log(predictions)+(1-ground_truth)*xp.log(1-predictions))
 
     def loss_derivative(self,
                         ground_truth: Union[np.ndarray, cp.ndarray],
@@ -40,4 +40,4 @@ class BinaryCrossEntropy(Loss):
             if self.come_from_logits:
                 predictions = _logits_to_probabilities(predictions)
             predictions = _clip_predictions_in_given_range(predictions)
-            return (predictions - ground_truth)/(predictions*(1-predictions) + EPSILON)
+            return ((predictions - ground_truth)/(predictions*(1-predictions))) / ground_truth.shape[-1]
