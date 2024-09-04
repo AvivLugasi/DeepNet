@@ -1,11 +1,12 @@
 from abc import ABC
+from Optimizers.Consts import INITIAL_LEARNING_RATE
 
 
 class Optimizer(ABC):
-    def __init__(self, learning_rate: float):
-        self.learning_rate = learning_rate
+    def __init__(self, init_learning_rate: float = INITIAL_LEARNING_RATE):
+        self.init_learning_rate = init_learning_rate
 
-    def apply_gradients(self, gradients, variables):
+    def apply_gradients(self, gradients, variables, regularizer):
         """
         Apply gradients to variables. This method needs to be overridden by subclasses.
         """
@@ -15,4 +16,4 @@ class Optimizer(ABC):
         """
         Return configuration details for the optimizer.
         """
-        return {"learning_rate": self.learning_rate}
+        return {"learning_rate": self.init_learning_rate}

@@ -17,4 +17,7 @@ class MSE(Loss):
                         ground_truth: Union[np.ndarray, cp.ndarray],
                         predictions: Union[np.ndarray, cp.ndarray]):
         if validate_same_device_for_data_items(ground_truth=ground_truth, predictions=predictions):
-            return (predictions - ground_truth) / ground_truth.shape[-1]
+            return predictions - ground_truth
+
+    def config(self):
+        return self.__class__.__name__

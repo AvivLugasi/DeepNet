@@ -18,10 +18,10 @@ class _DropoutBase(Layer, ABC):
                  seed=None):
         self.set_keep_prob(keep_prob)
         self.seed = seed
-        self.set_mod(is_training=True)
+        self._training_mod = True
 
-    def backward_pass(self, input_mat: Union[np.ndarray, cp.ndarray]):
-        return input_mat
+    def backward_pass(self, *args, **kwargs):
+        return kwargs.get('grads')
 
     def binary_mask(self, input_mat: Union[np.ndarray, cp.ndarray]):
         xp = cp.get_array_module(input_mat)
@@ -49,6 +49,9 @@ class _DropoutBase(Layer, ABC):
 
 
 class Dropout(_DropoutBase):
+    def __init__(self, keep_prob: float = 0.5, seed=None):
+        super().__init__(keep_prob, seed)
+
     def forward_pass(self, input_mat: Union[np.ndarray, cp.ndarray]):
         if self.get_mod():
             input_mat = self.binary_mask(input_mat=input_mat)
@@ -58,6 +61,9 @@ class Dropout(_DropoutBase):
 
 
 class InvertedDropout(_DropoutBase):
+    def __init__(self, keep_prob: float = 0.5, seed=None):
+        super().__init__(keep_prob, seed)
+
     def forward_pass(self, input_mat: Union[np.ndarray, cp.ndarray]):
         if self.get_mod():
             input_mat = self.binary_mask(input_mat=input_mat)

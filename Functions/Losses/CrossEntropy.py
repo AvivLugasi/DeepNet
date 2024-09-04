@@ -6,7 +6,7 @@ from System.Utils.Utils import logits_to_probabilities, clip_predictions_in_give
 from System.Utils.Validations import validate_same_device_for_data_items
 
 
-class BinaryCrossEntropy(Loss):
+class CrossEntropy(Loss):
     def __init__(self, come_from_logits: bool = False):
         self.come_from_logits = come_from_logits
 
@@ -18,7 +18,7 @@ class BinaryCrossEntropy(Loss):
             if self.come_from_logits:
                 predictions = logits_to_probabilities(predictions)
             predictions = clip_predictions_in_given_range(predictions)
-            return -xp.mean(ground_truth*xp.log(predictions)+(1-ground_truth)*xp.log(1-predictions))
+            return xp.mean(-xp.sum(ground_truth * xp.log(predictions), axis=0))
 
     def loss_derivative(self,
                         ground_truth: Union[np.ndarray, cp.ndarray],
@@ -27,7 +27,8 @@ class BinaryCrossEntropy(Loss):
             if self.come_from_logits:
                 predictions = logits_to_probabilities(predictions)
             predictions = clip_predictions_in_given_range(predictions)
-            return (predictions - ground_truth)/(predictions*(1-predictions))
+            # not taking into account usage with softmax
+            return -1 / predictions
 
     def config(self):
         return self.__class__.__name__

@@ -13,3 +13,6 @@ class Layer(ABC):
 
     def __call__(self, *args, **kwargs):
         return self.forward_pass(*args, **kwargs)
+
+    def update_weights(self, **kwargs):
+        raise NotImplementedError("Subclasses should implement this method.")

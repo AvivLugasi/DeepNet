@@ -14,3 +14,6 @@ class Loss(ABC):
                         ground_truth: Union[np.ndarray, cp.ndarray],
                         predictions: Union[np.ndarray, cp.ndarray]):
         raise NotImplementedError("Subclasses should implement this method.")
+
+    def config(self):
+        raise NotImplementedError("Subclasses should implement this method.")

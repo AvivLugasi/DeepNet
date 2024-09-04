@@ -20,13 +20,6 @@ class Softmax(Activation):
             return gpu_softmax(x, axis=0)
 
     def derivative(self, x):
-        """
-        As softmax derivative is not necessary due the fact that it is usually applied
-        to the output layer, and therefore x should be the output after taking the
-        derivative of the loss function with respect to the input passed by the softmax function
-        when assembling a new Dense layer a validation need to be applied that this function is
-        associated only with the last layer(e.g the output layer)
-        :param x: The linear combination of W*X + b of a neuron
-        :return: X
-        """
-        return x
+        xp = cp.get_array_module(x)
+        # change and think about a method to calculate both ways/ limit softmax to be used only on last layer? combined with cross entropy?
+        return 1
