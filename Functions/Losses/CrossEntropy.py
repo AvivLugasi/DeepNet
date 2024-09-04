@@ -28,7 +28,8 @@ class CrossEntropy(Loss):
                 predictions = logits_to_probabilities(predictions)
             predictions = clip_predictions_in_given_range(predictions)
             # not taking into account usage with softmax
-            return -1 / predictions
+            #return -1 / predictions
+            return predictions - ground_truth
 
     def config(self):
         return self.__class__.__name__

@@ -11,7 +11,7 @@ class MSE(Loss):
              predictions: Union[np.ndarray, cp.ndarray]):
         if validate_same_device_for_data_items(ground_truth=ground_truth, predictions=predictions):
             xp = cp.get_array_module(ground_truth)
-            return 0.5 * xp.mean(xp.power(ground_truth - predictions, 2))
+            return 0.5 * xp.mean(xp.power(predictions - ground_truth, 2))
 
     def loss_derivative(self,
                         ground_truth: Union[np.ndarray, cp.ndarray],

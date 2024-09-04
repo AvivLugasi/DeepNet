@@ -65,8 +65,11 @@ class Dense(Layer):
         self.input_mat = input_mat
         if self.weights_mat is None:
             self.init_weights_mat(input_mat.shape[0])
-
-        self.weighted_input_mat = self.xp_module.dot(self.weights_mat, input_mat) + self.bias_mat
+        if self.bias_mat is not None:
+            bias_term = self.bias_mat
+        else:
+            bias_term = 0
+        self.weighted_input_mat = self.xp_module.dot(self.weights_mat, input_mat) + bias_term
         self.activated_weighted_input = self.activation_func.activate(self.weighted_input_mat)
         return self.activated_weighted_input
 
