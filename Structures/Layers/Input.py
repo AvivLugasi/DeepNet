@@ -29,7 +29,7 @@ class Input(Layer):
 
     def set_data(self, data_x: Union[np.ndarray, cp.ndarray], data_y: Union[np.ndarray, cp.ndarray]):
         if data_x is not None and data_y is not None:
-            validate_same_device_for_data_items(data_x, data_y)
+            validate_same_device_for_data_items(data_x = data_x, data_y = data_y)
             validate_np_cp_array(data_x)
             xp = validate_np_cp_array(data_y)
             if self._features_are_rows:

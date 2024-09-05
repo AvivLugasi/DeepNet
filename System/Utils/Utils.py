@@ -2,7 +2,7 @@ from typing import Union
 import numpy as np
 import cupy as cp
 from Functions.Activations.Sigmoid import Sigmoid
-from Functions.Activations.Softmax import Softmax
+from Structures.Layers.SoftMax import softmax
 
 EPSILON = 1e-15
 
@@ -18,4 +18,4 @@ def logits_to_probabilities(predictions: Union[np.ndarray, cp.ndarray]):
     if predictions.shape[0] == 1:
         return Sigmoid().activate(predictions)
     else:
-        return Softmax.activate(predictions)
+        return softmax(predictions)

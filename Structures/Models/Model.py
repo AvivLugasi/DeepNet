@@ -3,6 +3,7 @@ from typing import Iterable, Union, Tuple, Literal
 from sklearn.model_selection import train_test_split
 
 from Functions.Losses.Consts import LOSS_FUNCTIONS_VALID_VALUES
+from Functions.Losses.CrossEntropy import CrossEntropy
 from Functions.Losses.Loss import Loss
 from Functions.Losses.MSE import MSE
 from Functions.Losses.Utils import return_loss_func_from_str
@@ -12,12 +13,14 @@ from Optimizers.Consts import OPTIMIZERS_VALID_FUNCTIONS
 from Optimizers.Optimizer import Optimizer
 from Optimizers.SGD import SGD
 from Optimizers.Utils import return_optimizer_from_str
+from Structures.Layers.Consts import CROSS_ENTROPY_AFTER_SOFTMAX_FUNC
 from Structures.Layers.Dropout import _DropoutBase
 from Structures.Layers.Input import Input
 from Structures.Layers.Layer import Layer
 import numpy as np
 import cupy as cp
 
+from Structures.Layers.SoftMax import SoftMax
 from System.Utils.Validations import validate_number_in_range, validate_np_cp_array, validate_same_device_for_data_items
 
 
@@ -70,7 +73,12 @@ class Model:
         :param loss_grad: The gradient of the loss function with respect to the output.
         """
         grads = loss_grad
-        for layer in reversed(self.hidden_layers):
+        softmax_optimized = isinstance(self.hidden_layers[-1], SoftMax) and isinstance(self.loss, CrossEntropy)
+
+        for i, layer in enumerate(reversed(self.hidden_layers)):
+            if softmax_optimized and i == 0:
+                # Skip the backward pass for softmax if cross-entropy optimization is applied
+                continue
             grads = layer.backward_pass(grads=grads, optimizer=self.optimizer)
 
     def compile(self,
@@ -146,7 +154,7 @@ class Model:
                     f"validation_split must be a float in range 0,1 excluding, instead got {validation_split}")
         elif validation_data is not None:
             if len(validation_data) == 2:
-                validate_same_device_for_data_items(validation_data[0], validation_data[1])
+                validate_same_device_for_data_items(val_x = validation_data[0], val_y = validation_data[1])
                 validation_x, validation_y = validation_data[0], validation_data[1]
                 if validation_x.shape[0] != self.input_layer.data_x.shape[0]:
                     validation_x = validation_x.T
@@ -179,9 +187,16 @@ class Model:
                 total_loss += batch_loss
                 print(
                     f"batch {self.loss.config()} loss is:{batch_loss:.8f} for batch number: {batch_i} of epoch:{epoch}")
+
                 # backward pass
-                loss_grad = self.loss.loss_derivative(ground_truth=batch_y,
-                                                      predictions=output)
+                # checking if softmax cross entropy optimization can be applied
+                if isinstance(self.hidden_layers[-1], SoftMax) and isinstance(self.loss, CrossEntropy):
+                    loss_grad = self.loss.loss_derivative(ground_truth=batch_y,
+                                                          predictions=output,
+                                                          softmax_indicator=CROSS_ENTROPY_AFTER_SOFTMAX_FUNC)
+                else:
+                    loss_grad = self.loss.loss_derivative(ground_truth=batch_y,
+                                                          predictions=output)
                 self.backward(loss_grad=loss_grad)
 
             # epoch and validation losses calculations

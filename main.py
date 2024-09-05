@@ -3,7 +3,6 @@ import pandas as pd
 
 from Functions.Activations.LeakyRelu import LeakyRelu
 from Functions.Activations.Sigmoid import Sigmoid
-from Functions.Activations.Softmax import Softmax
 from Functions.Activations.Tanh import Tanh
 from Functions.Losses.BinaryCrossEntropy import BinaryCrossEntropy
 from Functions.Losses.CrossEntropy import CrossEntropy
@@ -18,6 +17,7 @@ from sklearn.model_selection import train_test_split
 from Structures.Layers.Dense import Dense
 from Structures.Layers.Dropout import Dropout, InvertedDropout
 from Structures.Layers.Input import Input
+from Structures.Layers.SoftMax import SoftMax
 from Structures.Models.Model import Model
 
 df_train = pd.read_csv('Datasets/Datasets/Mnist/Digits/mnist_train.csv')
@@ -53,16 +53,17 @@ dense_2 = Dense(units=45,
                 weights_regularizer=None,
                 xp_module=cp)
 dense_3 = Dense(units=10,
-                activation=Softmax(),
+                activation=LeakyRelu(),
                 use_bias=True,
-                weights_init_method=GlorotUniform(),
+                weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=None,
                 xp_module=cp)
+softmax = SoftMax()
 dropout_1 = InvertedDropout(keep_prob=0.8)
 dropout_2 = InvertedDropout(keep_prob=0.6)
 
-m = Model(input_layer=input_l, hidden_layers=[dense_1, dropout_1, dense_2, dense_3])
+m = Model(input_layer=input_l, hidden_layers=[dense_1, dropout_1, dense_2, dense_3, softmax])
 m.compile(optimizer=SGD(init_learning_rate=0.01), loss=CrossEntropy(), metrics=[Accuracy()])
 m.fit(y_train=y_train,
       x_train=x_train,

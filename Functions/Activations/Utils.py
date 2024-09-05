@@ -6,7 +6,6 @@ from Functions.Activations.LeakyRelu import LeakyRelu
 from Functions.Activations.Linear import Linear
 from Functions.Activations.Relu import Relu
 from Functions.Activations.Sigmoid import Sigmoid
-from Functions.Activations.Softmax import Softmax
 from Functions.Activations.Tanh import Tanh
 
 
@@ -24,6 +23,4 @@ def return_activation_from_str(func_name: Literal[ACTIVATION_FUNCTION_VALID_VALU
             return Sigmoid()
         elif func_name == ACTIVATION_FUNCTION_VALID_VALUES[4]:
             return Tanh()
-        elif func_name == ACTIVATION_FUNCTION_VALID_VALUES[5]:
-            return Softmax()
         return Linear()

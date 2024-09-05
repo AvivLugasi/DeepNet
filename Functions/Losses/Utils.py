@@ -1,6 +1,4 @@
-from typing import Literal, Union
-from Functions.Activations.Sigmoid import Sigmoid
-from Functions.Activations.Softmax import Softmax
+from typing import Literal
 from Functions.Losses.BinaryCrossEntropy import BinaryCrossEntropy
 from Functions.Losses.Consts import LOSS_FUNCTIONS_VALID_VALUES
 from Functions.Losses.CrossEntropy import CrossEntropy
