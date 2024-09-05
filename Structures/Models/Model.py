@@ -1,10 +1,13 @@
 from typing import Iterable, Union, Tuple, Literal
 
+from sklearn.model_selection import train_test_split
+
 from Functions.Losses.Consts import LOSS_FUNCTIONS_VALID_VALUES
 from Functions.Losses.Loss import Loss
 from Functions.Losses.MSE import MSE
 from Functions.Losses.Utils import return_loss_func_from_str
 from Functions.Metrics.Metric import Metric
+from Functions.Metrics.Utils import return_metric_from_str
 from Optimizers.Consts import OPTIMIZERS_VALID_FUNCTIONS
 from Optimizers.Optimizer import Optimizer
 from Optimizers.SGD import SGD
@@ -14,6 +17,8 @@ from Structures.Layers.Input import Input
 from Structures.Layers.Layer import Layer
 import numpy as np
 import cupy as cp
+
+from System.Utils.Validations import validate_number_in_range, validate_np_cp_array, validate_same_device_for_data_items
 
 
 class Model:
@@ -92,6 +97,8 @@ class Model:
         else:
             raise ValueError(f"expected optimizer to be instance of Optimizer, instead got {optimizer.__class__}")
         for metric in metrics:
+            if isinstance(metric, str):
+                metric = return_metric_from_str(metric)
             if not isinstance(metric, Metric):
                 raise ValueError(
                     f"expected metrics to be iterable instances of Metric classes, instead got {metric.__class__}")
@@ -103,7 +110,7 @@ class Model:
             x_train: Union[np.ndarray, cp.ndarray] = None,
             epochs=1,
             batch_size=32,
-            validation_split: float = 0.0,
+            validation_split: float = None,
             validation_data: Tuple[Union[np.ndarray, cp.ndarray]] = None,
             shuffle: bool = True,
             ):
@@ -121,19 +128,38 @@ class Model:
         if x_train is not None and y_train is not None:
             self.input_layer.set_data(data_x=x_train, data_y=y_train)
 
+        if validation_split is not None and validation_data is not None:
+            raise ValueError("Only one of the parameters validation_split/validation_data can be defined")
+        if validation_split is not None:
+            if validate_number_in_range(n=validation_split,
+                                        include_lower=False,
+                                        include_upper=False):
+                # input layer make sure that samples are the columns, train_test_split needs it as rows
+                x, y = self.input_layer.data_x.T, self.input_layer.data_y.T
+                x_train, validation_x, y_train, validation_y = train_test_split(x, y, test_size=validation_split)
+                # change the data shape to match the network requirements
+                x_train, validation_x, y_train, validation_y = x_train.T, validation_x.T, y_train.T, validation_y.T
+                # set the new train data in the input layer
+                self.input_layer.set_data(data_x=x_train, data_y=y_train)
+            else:
+                raise ValueError(
+                    f"validation_split must be a float in range 0,1 excluding, instead got {validation_split}")
+        elif validation_data is not None:
+            if len(validation_data) == 2:
+                validate_same_device_for_data_items(validation_data[0], validation_data[1])
+                validation_x, validation_y = validation_data[0], validation_data[1]
+                if validation_x.shape[0] != self.input_layer.data_x.shape[0]:
+                    validation_x = validation_x.T
+                if validation_y.shape[0] != self.input_layer.data_y.shape[0]:
+                    validation_y = validation_y.T
+            else:
+                raise ValueError("if validation_data is defined both validation_X and validation_Y needs to be defined")
+
         if shuffle:
             self.input_layer.shuffle_in_every_epoch = shuffle
         self.input_layer.batch_size = batch_size
         self.input_layer.init_queue()
         num_of_batches = len(self.input_layer.batches_queue)
-
-        if validation_data is not None:
-            validation_x = validation_data[0]
-            validation_y = validation_data[1]
-            if validation_x.shape[0] != self.input_layer.data_x.shape[0]:
-                validation_x = validation_x.T
-            if validation_y.shape[0] != self.input_layer.data_y.shape[0]:
-                validation_y = validation_y.T
 
         # Training loop here
         for epoch in range(epochs):
@@ -147,17 +173,21 @@ class Model:
                 batch = self.input_layer.forward_pass()
                 batch_x, batch_y = batch[0], batch[1]
                 output = self.forward(inputs=batch_x)
+                # batch loss calculation
                 batch_loss = self.loss.loss(ground_truth=batch_y,
                                             predictions=output)
                 total_loss += batch_loss
-                print(f"batch {self.loss.config()} loss is:{batch_loss:.8f} for batch number: {batch_i} of epoch:{epoch}")
+                print(
+                    f"batch {self.loss.config()} loss is:{batch_loss:.8f} for batch number: {batch_i} of epoch:{epoch}")
                 # backward pass
                 loss_grad = self.loss.loss_derivative(ground_truth=batch_y,
                                                       predictions=output)
                 self.backward(loss_grad=loss_grad)
 
+            # epoch and validation losses calculations
             avg_loss = total_loss / len(self.input_layer.batches_queue)
-            print(f"training losses: {self.loss.config()}: avg loss is:{avg_loss:.8f} total loss is:{total_loss:.8f} for epoch:{epoch}")
+            print(
+                f"training losses: {self.loss.config()}: avg loss is:{avg_loss:.8f} total loss is:{total_loss:.8f} for epoch:{epoch}")
 
             self.set_mode(is_training=False)
             val_output = self.forward(inputs=validation_x)
@@ -192,14 +222,22 @@ class Model:
                                  predictions=predictions)
             print(f"{metric.config()} score is:{score:.3f}")
 
-    def predict(self, x):
+    def predict(self,
+                x: Union[np.ndarray, cp.ndarray] = None,
+                samples_as_cols: bool = True):
         """
         Make inference on input data
 
+        :param samples_as_cols:
         :param x: Test inputs.
         :return: predictions vector
         """
         self.set_mode(is_training=False)
+        validate_np_cp_array(x)
+        if not samples_as_cols:
+            x = x.T
+
+        return self.forward(inputs=x)
 
     def set_mode(self, is_training: bool = True):
         for layer in self.hidden_layers:
