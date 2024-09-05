@@ -118,7 +118,6 @@ class Model:
         :param validation_data:
         :param shuffle:
         """
-        self.set_mode(is_training=True)
         if x_train is not None and y_train is not None:
             self.input_layer.set_data(data_x=x_train, data_y=y_train)
 
@@ -138,6 +137,7 @@ class Model:
 
         # Training loop here
         for epoch in range(epochs):
+            self.set_mode(is_training=True)
             print(f"epoch number: {epoch}")
             total_loss = 0
             # Implement batch training, forward, loss calculation, backward, optimizer step
@@ -158,6 +158,8 @@ class Model:
 
             avg_loss = total_loss / len(self.input_layer.batches_queue)
             print(f"training losses: {self.loss.config()}: avg loss is:{avg_loss:.8f} total loss is:{total_loss:.8f} for epoch:{epoch}")
+
+            self.set_mode(is_training=False)
             val_output = self.forward(inputs=validation_x)
             val_loss = self.loss.loss(ground_truth=validation_y,
                                       predictions=val_output)

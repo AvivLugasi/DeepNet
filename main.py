@@ -38,14 +38,14 @@ y_train = feature_one_hot(mat=y_train, feature_row=0)
 y_test = feature_one_hot(mat=y_test, feature_row=0)
 
 input_l = Input(features_are_rows=True)
-dense_1 = Dense(units=20,
+dense_1 = Dense(units=45,
                 activation=LeakyRelu(),
                 use_bias=True,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=None,
                 xp_module=cp)
-dense_2 = Dense(units=20,
+dense_2 = Dense(units=45,
                 activation=LeakyRelu(),
                 use_bias=True,
                 weights_init_method=HeUniform(),
@@ -53,13 +53,6 @@ dense_2 = Dense(units=20,
                 weights_regularizer=None,
                 xp_module=cp)
 dense_3 = Dense(units=10,
-                activation=Tanh(),
-                use_bias=True,
-                weights_init_method=GlorotUniform(),
-                bias_init_method=Zeroes(),
-                weights_regularizer=None,
-                xp_module=cp)
-dense_4 = Dense(units=10,
                 activation=Softmax(),
                 use_bias=True,
                 weights_init_method=GlorotUniform(),
@@ -69,11 +62,11 @@ dense_4 = Dense(units=10,
 dropout_1 = InvertedDropout(keep_prob=0.8)
 dropout_2 = InvertedDropout(keep_prob=0.6)
 
-m = Model(input_layer=input_l, hidden_layers=[dense_1, dense_2, dense_4])
+m = Model(input_layer=input_l, hidden_layers=[dense_1, dropout_1, dense_2, dense_3])
 m.compile(optimizer=SGD(init_learning_rate=0.01), loss=CrossEntropy(), metrics=[Accuracy()])
 m.fit(y_train=y_train,
       x_train=x_train,
-      epochs=2400,
+      epochs=10000,
       batch_size=1200,
       validation_data=(x_test, y_test),
       shuffle=True)
