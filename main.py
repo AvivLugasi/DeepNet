@@ -11,6 +11,10 @@ from Functions.Metrics.Accuracy import Accuracy
 from Initializers.GlorotHeInitializers import GlorotNormal, HeNormal, GlorotUniform, HeUniform
 from Initializers.Zeroes import Zeroes
 from Optimizers.SGD import SGD
+from Optimizers.Schedules.CosineDecay import CosineDecay
+from Optimizers.Schedules.ExponentialDecay import ExponentialDecay
+from Optimizers.Schedules.InverseTimeDecay import InverseTimeDecay
+from Optimizers.Schedules.PiecewiseConstantDecay import PiecewiseConstantDecay
 from PreProcessing.Features_encoding import feature_one_hot
 from PreProcessing.Normalization import standardization
 from sklearn.model_selection import train_test_split
@@ -63,11 +67,14 @@ softmax = SoftMax()
 dropout_1 = InvertedDropout(keep_prob=0.8)
 dropout_2 = InvertedDropout(keep_prob=0.6)
 
+pwc_d = PiecewiseConstantDecay(boundaries=[20000, 40000, 50000, 80000],
+                               values=[0.15, 0.07, 0.01, 0.005])
+
 m = Model(input_layer=input_l, hidden_layers=[dense_1, dropout_1, dense_2, dense_3, softmax])
-m.compile(optimizer=SGD(init_learning_rate=0.01, momentum=0.9), loss=CrossEntropy(), metrics=[Accuracy()])
+m.compile(optimizer=SGD(momentum=0.9, schedular=pwc_d), loss=CrossEntropy(), metrics=[Accuracy()])
 m.fit(y_train=y_train,
       x_train=x_train,
-      epochs=1500,
+      epochs=800,
       batch_size=512,
       validation_data=(x_test, y_test),
       shuffle=True)

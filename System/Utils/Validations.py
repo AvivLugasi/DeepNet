@@ -73,6 +73,28 @@ def validate_bool_val(val):
 
 
 def validate_positive(n: float = None):
-    if isinstance(n, float) and n > 0:
+    if (isinstance(n, float) or isinstance(n, int)) and n > 0:
         return True
     return False
+
+
+def validate_positive_increasing_integer_list(n: list):
+    biggest=0
+    for i in n:
+        if not validate_positive_int(i) or i <= biggest:
+            return False
+        biggest = i
+    return True
+
+
+def validate_positive_decreasing_integer_list(n: list):
+    if n is None:
+        return True
+    if isinstance(n, list):
+        smallest = n[0]
+        if len(n) > 1:
+            for i in n[1:]:
+                if not validate_positive(i) or i >= smallest:
+                    return False
+                smallest = i
+    return True

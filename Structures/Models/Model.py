@@ -9,7 +9,7 @@ from Functions.Losses.MSE import MSE
 from Functions.Losses.Utils import return_loss_func_from_str
 from Functions.Metrics.Metric import Metric
 from Functions.Metrics.Utils import return_metric_from_str
-from Optimizers.Consts import OPTIMIZERS_VALID_FUNCTIONS
+from Optimizers.Consts import OPTIMIZERS_VALID_FUNCTIONS, INITIAL_LEARNING_RATE
 from Optimizers.Optimizer import Optimizer
 from Optimizers.SGD import SGD
 from Optimizers.Utils import return_optimizer_from_str
@@ -22,6 +22,8 @@ import cupy as cp
 
 from Structures.Layers.SoftMax import SoftMax
 from System.Utils.Validations import validate_number_in_range, validate_np_cp_array, validate_same_device_for_data_items
+from tqdm.auto import tqdm
+
 
 
 class Model:
@@ -82,7 +84,7 @@ class Model:
             grads = layer.backward_pass(grads=grads, optimizer=self.optimizer)
 
     def compile(self,
-                optimizer: Union[Optimizer, Literal[OPTIMIZERS_VALID_FUNCTIONS]] = SGD(),
+                optimizer: Union[Optimizer, Literal[OPTIMIZERS_VALID_FUNCTIONS]] = SGD(init_learning_rate=INITIAL_LEARNING_RATE),
                 loss: Union[Loss, Literal[LOSS_FUNCTIONS_VALID_VALUES]] = MSE(),
                 metrics: Iterable[Metric] = None):
         """
@@ -116,8 +118,8 @@ class Model:
     def fit(self,
             y_train: Union[np.ndarray, cp.ndarray] = None,
             x_train: Union[np.ndarray, cp.ndarray] = None,
-            epochs=1,
-            batch_size=32,
+            epochs=50,
+            batch_size=256,
             validation_split: float = None,
             validation_data: Tuple[Union[np.ndarray, cp.ndarray]] = None,
             shuffle: bool = True,
@@ -169,15 +171,18 @@ class Model:
         self.input_layer.init_queue()
         num_of_batches = len(self.input_layer.batches_queue)
 
+        # Initialize the progress bar for total epochs
+        total_batches = epochs * num_of_batches
+        progress_bar = tqdm(total=total_batches, desc='Training Progress')
         # Training loop here
         for epoch in range(epochs):
             self.set_mode(is_training=True)
-            print(f"epoch number: {epoch}")
             total_loss = 0
+            epoch_progress_bar = tqdm(total=num_of_batches, desc=f'Epoch {epoch}', leave=False)
             # Implement batch training, forward, loss calculation, backward, optimizer step
             for batch_i in range(0, num_of_batches):
                 # forward pass
-                print(f"batch number: {batch_i} of epoch:{epoch}")
+                # print(f"batch number: {batch_i} of epoch:{epoch}")
                 batch = self.input_layer.forward_pass()
                 batch_x, batch_y = batch[0], batch[1]
                 output = self.forward(inputs=batch_x)
@@ -185,8 +190,6 @@ class Model:
                 batch_loss = self.loss.loss(ground_truth=batch_y,
                                             predictions=output)
                 total_loss += batch_loss
-                print(
-                    f"batch {self.loss.config()} loss is:{batch_loss:.8f} for batch number: {batch_i} of epoch:{epoch}")
 
                 # backward pass
                 # checking if softmax cross entropy optimization can be applied
@@ -198,19 +201,30 @@ class Model:
                     loss_grad = self.loss.loss_derivative(ground_truth=batch_y,
                                                           predictions=output)
                 self.backward(loss_grad=loss_grad)
+                # update learning rate(if a scheduler was defined)
+                self.optimizer.update_learning_rate()
+                # Update progress bars
+                progress_bar.update(1)
+                epoch_progress_bar.update(1)
+                # # batch loss
+                # print(f"batch {self.loss.config()} loss is:{batch_loss:.8f} for batch number: {batch_i} of epoch:{epoch}")
 
             # epoch and validation losses calculations
             avg_loss = total_loss / len(self.input_layer.batches_queue)
-            print(
-                f"training losses: {self.loss.config()}: avg loss is:{avg_loss:.8f} total loss is:{total_loss:.8f} for epoch:{epoch}")
+            epoch_progress_bar.close()
+
+            # Epoch and validation losses calculations
+            print(f"Epoch {epoch} - Training Loss: Avg Loss: {avg_loss:.8f}, Total Loss: {total_loss:.8f}")
 
             self.set_mode(is_training=False)
             val_output = self.forward(inputs=validation_x)
             val_loss = self.loss.loss(ground_truth=validation_y,
                                       predictions=val_output)
-            print(f"validation loss: {val_loss:.8f} for epoch:{epoch}")
+            print(f"Epoch {epoch} - Validation Loss: {val_loss:.8f}")
             if self.input_layer.shuffle_in_every_epoch:
                 self.input_layer.batches_queue = None
+        # Close the overall progress bar
+        progress_bar.close()
 
     def evaluate(self,
                  x_test: Union[np.ndarray, cp.ndarray],

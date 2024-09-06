@@ -28,7 +28,7 @@ class Dense(Layer):
                  xp_module=cp):
         self.xp_module = validate_xp_module(xp=xp_module)
 
-        self.units = validate_positive_int(units=units)
+        self.units = validate_positive_int(units)
 
         self.activation_func = activation if isinstance(activation, Activation) \
             else return_activation_from_str(func_name=activation)
