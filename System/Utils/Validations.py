@@ -70,3 +70,9 @@ def validate_number_in_range(n: float,
 
 def validate_bool_val(val):
     return isinstance(val, bool)
+
+
+def validate_positive(n: float = None):
+    if isinstance(n, float) and n > 0:
+        return True
+    return False

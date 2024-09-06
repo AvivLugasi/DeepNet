@@ -37,9 +37,13 @@ class Dense(Layer):
             else return_initializer_from_str(initializer_name=weights_init_method)
 
         self.weights_mat = None
+        # store the velocity value for the bias vector, incase momentum is applied
+        self.v_weights = 0
 
         if use_bias:
             self.bias_mat = self._init_bias_mat(bias_init_method=bias_init_method)
+            # store the velocity value for the bias vector, incase momentum is applied
+            self.v_bias = 0
         else:
             self.bias_mat = None
 
@@ -89,14 +93,16 @@ class Dense(Layer):
             bias_gradients = kwargs.get('bias_gradients')
 
         if optimizer is not None and isinstance(optimizer, Optimizer) and weights_gradients is not None:
-            self.weights_mat = optimizer.apply_gradients(gradients=weights_gradients,
-                                                         variables=self.weights_mat,
-                                                         regularizer=self.weights_regularizer)
+            self.weights_mat, self.v_weights = optimizer.apply_gradients(gradients=weights_gradients,
+                                                                         variables=self.weights_mat,
+                                                                         regularizer=self.weights_regularizer,
+                                                                         velocity=self.v_weights)
             if self.bias_mat is not None:
                 if bias_gradients is not None:
-                    self.bias_mat = optimizer.apply_gradients(gradients=bias_gradients,
-                                                              variables=self.bias_mat,
-                                                              regularizer=self.weights_regularizer)
+                    self.bias_mat, self.v_bias = optimizer.apply_gradients(gradients=bias_gradients,
+                                                                           variables=self.bias_mat,
+                                                                           regularizer=self.weights_regularizer,
+                                                                           velocity=self.v_bias)
                 else:
                     raise TypeError("Missing required keyword argument: 'bias_gradients'")
         else:

@@ -64,11 +64,11 @@ dropout_1 = InvertedDropout(keep_prob=0.8)
 dropout_2 = InvertedDropout(keep_prob=0.6)
 
 m = Model(input_layer=input_l, hidden_layers=[dense_1, dropout_1, dense_2, dense_3, softmax])
-m.compile(optimizer=SGD(init_learning_rate=0.01), loss=CrossEntropy(), metrics=[Accuracy()])
+m.compile(optimizer=SGD(init_learning_rate=0.01, momentum=0.9), loss=CrossEntropy(), metrics=[Accuracy()])
 m.fit(y_train=y_train,
       x_train=x_train,
-      epochs=10000,
-      batch_size=1200,
+      epochs=1500,
+      batch_size=512,
       validation_data=(x_test, y_test),
       shuffle=True)
 
