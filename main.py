@@ -30,8 +30,15 @@ from Structures.Layers.Input import Input
 from Structures.Layers.SoftMax import SoftMax
 from Structures.Models.Model import Model
 
+# digit mnist
 df_train = pd.read_csv('Datasets/Datasets/Mnist/Digits/mnist_train.csv')
 df_test = pd.read_csv('Datasets/Datasets/Mnist/Digits/mnist_test.csv')
+# fashion mnist
+# df_train = pd.read_csv('Datasets/Datasets/Mnist/Fashion/fashion-mnist_train.csv')
+# df_test = pd.read_csv('Datasets/Datasets/Mnist/Fashion/fashion-mnist_test.csv')
+# letters mnist
+# df_train = pd.read_csv('Datasets/Datasets/Mnist/EMnist/emnist-letters-train.csv')
+# df_test = pd.read_csv('Datasets/Datasets/Mnist/EMnist/emnist-letters-test.csv')
 np_train = df_train.select_dtypes(include=[float, int]).values
 np_test = df_test.select_dtypes(include=[float, int]).values
 
@@ -46,24 +53,24 @@ x_train, x_test, y_train, y_test = x_train.T, x_test.T, y_train.reshape(-1, 1).T
 y_train, y_test = y_train.astype(cp.int64), y_test.astype(cp.int64)
 y_train = feature_one_hot(mat=y_train, feature_row=0)
 y_test = feature_one_hot(mat=y_test, feature_row=0)
-
+print(y_train.shape)
 input_l = Input(features_are_rows=True)
-dense_1 = Dense(units=16,
+dense_1 = Dense(units=800,
                 activation=LeakyRelu(alpha_value=0.1),
                 use_bias=False,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=L2(),
                 xp_module=cp,
-                batchnorm=BatchNorm(vectors_size=16))
-dense_2 = Dense(units=16,
+                batchnorm=BatchNorm(vectors_size=800))
+dense_2 = Dense(units=800,
                 activation=LeakyRelu(alpha_value=0.1),
                 use_bias=False,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=L2(),
                 xp_module=cp,
-                batchnorm=BatchNorm(vectors_size=16))
+                batchnorm=BatchNorm(vectors_size=800))
 dense_3 = Dense(units=10,
                 activation=LeakyRelu(alpha_value=0.05),
                 use_bias=False,
@@ -88,8 +95,7 @@ m.fit(y_train=y_train,
       x_train=x_train,
       epochs=100,
       batch_size=1024,
-      validation_data=(x_test, y_test),
+      validation_split=0.2,
       shuffle=True)
 
 m.evaluate(x_test=x_test, y_test=y_test, samples_as_cols=True)
-print(m.optimizer.learning_rate)

@@ -5,8 +5,11 @@ import numpy as np
 
 
 class Accuracy(Metric):
-    def __init__(self, threshold=0.5):
+    def __init__(self,
+                 threshold=0.5,
+                 samples_dim_index: int = 1):
         self.threshold = threshold
+        self.samples_dim_index = samples_dim_index
 
     def score(self,
               ground_truth: Union[np.ndarray, cp.ndarray],
@@ -23,7 +26,7 @@ class Accuracy(Metric):
             correct_labels = xp.where(ground_truth > self.threshold, 1, 0)
 
         correctly_classified = xp.sum(predicted_labels == correct_labels)
-        return correctly_classified / predictions.shape[1]
+        return correctly_classified / predictions.shape[self.samples_dim_index]
 
     def config(self):
         return self.__class__.__name__

@@ -28,8 +28,11 @@ class Dense(Layer):
                  bias_init_method: Union[Literal[INITIALIZERS_VALID_VALUES], Initializer] = Zeroes(),
                  weights_regularizer: Regularizer = None,
                  xp_module=cp,
-                 batchnorm: BatchNorm = None):
+                 batchnorm: BatchNorm = None,
+                 samples_dim_index: int = 1):
         self.xp_module = validate_xp_module(xp=xp_module)
+
+        self.samples_dim_index = samples_dim_index
 
         self.units = validate_positive_int(units)
 
@@ -93,7 +96,7 @@ class Dense(Layer):
                                                                      grads=grads)
         if self.batchnorm is not None:
             hidden_layer_error = self.batchnorm.backward_pass(grads=hidden_layer_error, optimizer=optimizer)
-        weights_gradients = self.xp_module.dot(hidden_layer_error, self.input_mat.T) / self.input_mat.shape[1]
+        weights_gradients = self.xp_module.dot(hidden_layer_error, self.input_mat.T) / self.input_mat.shape[self.samples_dim_index]
         gradient_to_return = self.xp_module.dot(self.weights_mat.T, hidden_layer_error)
         self.update_weights(bias_gradients=cp.mean(hidden_layer_error, axis=1, keepdims=True),
                             weights_gradients=weights_gradients,

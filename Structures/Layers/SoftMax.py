@@ -33,7 +33,7 @@ class SoftMax(Layer):
         :return: The value of the transformation applied using the activation function
         """
         validate_np_cp_array(x)
-        self.output = softmax(x)
+        self.output = softmax(x, axis=axis)
         return self.output
 
     def backward_pass(self, grads: Union[np.ndarray, cp.ndarray]):

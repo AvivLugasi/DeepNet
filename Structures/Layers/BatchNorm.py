@@ -19,6 +19,7 @@ class BatchNorm(Layer):
     def __init__(self,
                  vectors_size: int = DEFAULT_DENSE_LAYER_UNITS,
                  axis: int = 1,
+                 samples_size_index: int = 1,
                  beta_initializer: Union[Literal[INITIALIZERS_VALID_VALUES], Initializer] = Zeroes(),
                  gamma_initializer: Union[Literal[INITIALIZERS_VALID_VALUES], Initializer] = Constants(),
                  momentum: float = 0.9,
@@ -44,6 +45,7 @@ class BatchNorm(Layer):
         self.moving_mean = self._init_vector(initializer=moving_mean_initializer, vectors_size=vectors_size)
         self.moving_std = self._init_vector(initializer=moving_std_initializer, vectors_size=vectors_size)
         self.axis = axis
+        self.samples_size_index = samples_size_index
         self._training_mod = True
 
         if validate_number_in_range(n=momentum,
@@ -99,10 +101,14 @@ class BatchNorm(Layer):
         # return gradient of x
         d_y_x_normalized = grads * self.gamma_vec
         inv_var = 1 / ((self.batch_std ** 2 + EPSILON) ** 0.5)
-        m = self.input.shape[1]
-        d_x = (1. / m) * inv_var * (m * d_y_x_normalized - self.xp_module.sum(d_y_x_normalized, axis=1, keepdims=True)
+        m = self.input.shape[self.samples_size_index]
+        d_x = (1. / m) * inv_var * (m * d_y_x_normalized - self.xp_module.sum(d_y_x_normalized,
+                                                                              axis=self.axis,
+                                                                              keepdims=True)
                                     - self.normalized_input *
-                                    self.xp_module.sum(d_y_x_normalized * self.normalized_input, axis=1, keepdims=True))
+                                    self.xp_module.sum(d_y_x_normalized * self.normalized_input,
+                                                       axis=self.axis,
+                                                       keepdims=True))
         return d_x
 
     def update_weights(self,

@@ -9,6 +9,7 @@ from collections import deque
 class Input(Layer):
     def __init__(self,
                  shape: Tuple[int, ...] = None,
+                 samples_dim_index: int = 1,
                  data_x: Union[np.ndarray, cp.ndarray] = None,
                  data_y: Union[np.ndarray, cp.ndarray] = None,
                  batch_size: int = 1,
@@ -26,10 +27,11 @@ class Input(Layer):
         self.shuffle_in_every_epoch = shuffle_in_every_epoch
         self._features_are_rows = features_are_rows
         self.batches_queue = None
+        self.samples_dim_index = samples_dim_index
 
     def set_data(self, data_x: Union[np.ndarray, cp.ndarray], data_y: Union[np.ndarray, cp.ndarray]):
         if data_x is not None and data_y is not None:
-            validate_same_device_for_data_items(data_x = data_x, data_y = data_y)
+            validate_same_device_for_data_items(data_x=data_x, data_y=data_y)
             validate_np_cp_array(data_x)
             xp = validate_np_cp_array(data_y)
             if self._features_are_rows:
@@ -43,11 +45,12 @@ class Input(Layer):
             raise ValueError("Data cant be None, a np/cp nd.array should be passed")
 
     def _shuffle(self):
-        permutation = np.random.permutation(self.data_x.shape[-1])
+        permutation = np.random.permutation(self.data_x.shape[self.samples_dim_index])
         self.data_x = self.data_x[:, permutation]
         self.data_y = self.data_y[:, permutation]
 
-    def init_queue(self, input_mat_x: Union[np.ndarray, cp.ndarray] = None, input_mat_y: Union[np.ndarray, cp.ndarray] = None):
+    def init_queue(self, input_mat_x: Union[np.ndarray, cp.ndarray] = None,
+                   input_mat_y: Union[np.ndarray, cp.ndarray] = None):
         if input_mat_x is not None and input_mat_y is not None:
             self.set_data(input_mat_x, input_mat_y)
         if self.shuffle_in_every_epoch:
@@ -58,8 +61,8 @@ class Input(Layer):
             self.batches_queue.append([batch_x, batch_y])
 
     def _iter_batches(self):
-        num_of_full_batches = self.data_x.shape[-1] // self.batch_size
-        partial_batch_size = self.data_x.shape[-1] % self.batch_size
+        num_of_full_batches = self.data_x.shape[self.samples_dim_index] // self.batch_size
+        partial_batch_size = self.data_x.shape[self.samples_dim_index] % self.batch_size
 
         # Iterate over full batches
         for i in range(num_of_full_batches):
@@ -71,7 +74,8 @@ class Input(Layer):
         if partial_batch_size > 0:
             yield self.data_x[:, -partial_batch_size:], self.data_y[:, -partial_batch_size:]
 
-    def forward_pass(self, input_mat_x: Union[np.ndarray, cp.ndarray] = None, input_mat_y: Union[np.ndarray, cp.ndarray] = None):
+    def forward_pass(self, input_mat_x: Union[np.ndarray, cp.ndarray] = None,
+                     input_mat_y: Union[np.ndarray, cp.ndarray] = None):
         if not self.batches_queue:
             self.init_queue(input_mat_x, input_mat_y)
             if not self.batches_queue:

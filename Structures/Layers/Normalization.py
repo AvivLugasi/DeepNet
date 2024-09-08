@@ -15,11 +15,14 @@ def _return_normalization_func_from_str(func_name: Literal["standardization", "m
 
 
 class Normalization(Layer):
-    def __init__(self, method: Literal["standardization", "minmax_scalar"] = "standardization"):
+    def __init__(self,
+                 method: Literal["standardization", "minmax_scalar"] = "standardization",
+                 features_axis: int = 1):
         self.normalization_func = _return_normalization_func_from_str(func_name=method)
+        self.features_axis = features_axis
 
     def forward_pass(self, input_mat: Union[np.ndarray, cp.ndarray]):
-        return self.normalization_func(input_mat=input_mat)
+        return self.normalization_func(input_mat=input_mat, axis=self.features_axis)
 
     def backward_pass(self, input_mat: Union[np.ndarray, cp.ndarray]):
         return input_mat
