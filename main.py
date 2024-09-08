@@ -45,20 +45,22 @@ y_train = feature_one_hot(mat=y_train, feature_row=0)
 y_test = feature_one_hot(mat=y_test, feature_row=0)
 
 input_l = Input(features_are_rows=True)
-dense_1 = Dense(units=45,
+dense_1 = Dense(units=16,
                 activation=LeakyRelu(alpha_value=0.1),
-                use_bias=True,
+                use_bias=False,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=None,
-                xp_module=cp)
-dense_2 = Dense(units=45,
+                xp_module=cp,
+                batchnorm=BatchNorm(vectors_size=16))
+dense_2 = Dense(units=16,
                 activation=LeakyRelu(alpha_value=0.1),
-                use_bias=True,
+                use_bias=False,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=None,
-                xp_module=cp)
+                xp_module=cp,
+                batchnorm=BatchNorm(vectors_size=16))
 dense_3 = Dense(units=10,
                 activation=LeakyRelu(alpha_value=0.1),
                 use_bias=True,
@@ -80,7 +82,7 @@ m = Model(input_layer=input_l, hidden_layers=[dense_1, dense_2, dense_3, softmax
 m.compile(optimizer=SGD(momentum=0.9, schedular=exp_d), loss=CrossEntropy(), metrics=[Accuracy()])
 m.fit(y_train=y_train,
       x_train=x_train,
-      epochs=400,
+      epochs=450,
       batch_size=1024,
       validation_data=(x_test, y_test),
       shuffle=True)

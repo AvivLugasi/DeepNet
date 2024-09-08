@@ -98,7 +98,7 @@ class BatchNorm(Layer):
         self.update_weights(gamma_grads=gamma_grads, beta_grads=beta_grads, optimizer=optimizer)
         # return gradient of x
         d_y_x_normalized = grads * self.gamma_vec
-        inv_var = 1 / (self.batch_std ** 2 + EPSILON)
+        inv_var = 1 / ((self.batch_std ** 2 + EPSILON) ** 0.5)
         m = self.input.shape[1]
         d_x = (1. / m) * inv_var * (m * d_y_x_normalized - self.xp_module.sum(d_y_x_normalized, axis=1, keepdims=True)
                                     - self.normalized_input *
