@@ -16,6 +16,8 @@ class Optimizer(ABC):
                 raise ValueError(f"init_learning_rate must be positive float instead got {init_learning_rate}")
         if schedular is None or isinstance(schedular, Schedular):
             self.schedular = schedular
+            if schedular is not None:
+                self.learning_rate = self.schedular.learning_rate
         else:
             raise ValueError(f"schedular must be None or inherit from the Schedular class instead got:{schedular.__class__}")
 
@@ -28,11 +30,6 @@ class Optimizer(ABC):
             self.momentum = momentum
         else:
             raise ValueError(f"momentum must be in range [0, 1), instead got:{momentum}")
-
-        if schedular is None or isinstance(schedular, Schedular):
-            self.schedular = schedular
-        else:
-            raise ValueError(f"schedular must be None or inherit from the Schedular class instead got:{schedular.__class__}")
 
     def apply_gradients(self, *args, **kwargs):
         """

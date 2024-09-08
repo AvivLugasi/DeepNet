@@ -20,6 +20,9 @@ from PreProcessing.Features_encoding import feature_one_hot
 from PreProcessing.Normalization import standardization
 from sklearn.model_selection import train_test_split
 
+from Regularization.L1 import L1
+from Regularization.L1L2 import L1L2
+from Regularization.L2 import L2
 from Structures.Layers.BatchNorm import BatchNorm
 from Structures.Layers.Dense import Dense
 from Structures.Layers.Dropout import Dropout, InvertedDropout
@@ -50,7 +53,7 @@ dense_1 = Dense(units=16,
                 use_bias=False,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
-                weights_regularizer=None,
+                weights_regularizer=L2(),
                 xp_module=cp,
                 batchnorm=BatchNorm(vectors_size=16))
 dense_2 = Dense(units=16,
@@ -58,33 +61,35 @@ dense_2 = Dense(units=16,
                 use_bias=False,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
-                weights_regularizer=None,
+                weights_regularizer=L2(),
                 xp_module=cp,
                 batchnorm=BatchNorm(vectors_size=16))
 dense_3 = Dense(units=10,
                 activation=LeakyRelu(alpha_value=0.1),
-                use_bias=True,
+                use_bias=False,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
-                weights_regularizer=None,
-                xp_module=cp)
+                weights_regularizer=L2(),
+                xp_module=cp,
+                batchnorm=BatchNorm(vectors_size=10))
 softmax = SoftMax()
 dropout_1 = InvertedDropout(keep_prob=0.8)
 dropout_2 = InvertedDropout(keep_prob=0.6)
 
-# pwc_d = PiecewiseConstantDecay(boundaries=[10000, 20000, 40000, 50000, 80000],
-#                                values=[0.2, 0.15, 0.01, 0.005, 0.001])
+# pwc_d = PiecewiseConstantDecay(boundaries=[5000, 10000, 15000, 20000],
+#                                values=[0.15, 0.1, 0.05, 0.01])
 exp_d = ExponentialDecay(learning_rate=0.18,
-                         decay_steps=10000,
-                         decay_rate=0.96)
+                         decay_steps=8000,
+                         decay_rate=0.95)
 bn1 = BatchNorm(vectors_size=45)
 m = Model(input_layer=input_l, hidden_layers=[dense_1, dense_2, dense_3, softmax])
 m.compile(optimizer=SGD(momentum=0.9, schedular=exp_d), loss=CrossEntropy(), metrics=[Accuracy()])
 m.fit(y_train=y_train,
       x_train=x_train,
-      epochs=450,
+      epochs=100,
       batch_size=1024,
       validation_data=(x_test, y_test),
       shuffle=True)
 
 m.evaluate(x_test=x_test, y_test=y_test, samples_as_cols=True)
+print(m.optimizer.learning_rate)

@@ -100,17 +100,19 @@ class Dense(Layer):
         weights_gradients = kwargs.get('weights_gradients')
         if self.bias_mat is not None:
             bias_gradients = kwargs.get('bias_gradients')
-
+        if self.weights_regularizer is None:
+            regularizer_term = 0
+        else:
+            regularizer_term = self.weights_regularizer(self.weights_mat)
         if optimizer is not None and isinstance(optimizer, Optimizer) and weights_gradients is not None:
             self.weights_mat, self.v_weights = optimizer.apply_gradients(gradients=weights_gradients,
                                                                          variables=self.weights_mat,
-                                                                         regularizer=self.weights_regularizer,
+                                                                         regularizer=regularizer_term,
                                                                          velocity=self.v_weights)
             if self.bias_mat is not None:
                 if bias_gradients is not None:
                     self.bias_mat, self.v_bias = optimizer.apply_gradients(gradients=bias_gradients,
                                                                            variables=self.bias_mat,
-                                                                           regularizer=self.weights_regularizer,
                                                                            velocity=self.v_bias)
                 else:
                     raise TypeError("Missing required keyword argument: 'bias_gradients'")

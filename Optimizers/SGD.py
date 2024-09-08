@@ -13,7 +13,5 @@ class SGD(Optimizer):
                          schedular=schedular)
 
     def apply_gradients(self, gradients, variables, regularizer=0, velocity=0):
-        if regularizer is None:
-            regularizer = 0
         velocity = self.momentum * velocity + (1 - self.momentum) * (gradients + regularizer)
         return (variables - self.learning_rate * velocity), velocity
