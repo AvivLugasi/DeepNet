@@ -1,6 +1,7 @@
 import cupy as cp
 import pandas as pd
 
+from Functions.Activations.Elu import Elu
 from Functions.Activations.LeakyRelu import LeakyRelu
 from Functions.Activations.Sigmoid import Sigmoid
 from Functions.Activations.Tanh import Tanh
@@ -18,6 +19,8 @@ from Optimizers.Schedules.PiecewiseConstantDecay import PiecewiseConstantDecay
 from PreProcessing.Features_encoding import feature_one_hot
 from PreProcessing.Normalization import standardization
 from sklearn.model_selection import train_test_split
+
+from Structures.Layers.BatchNorm import BatchNorm
 from Structures.Layers.Dense import Dense
 from Structures.Layers.Dropout import Dropout, InvertedDropout
 from Structures.Layers.Input import Input
@@ -43,21 +46,21 @@ y_test = feature_one_hot(mat=y_test, feature_row=0)
 
 input_l = Input(features_are_rows=True)
 dense_1 = Dense(units=45,
-                activation=LeakyRelu(),
+                activation=LeakyRelu(alpha_value=0.1),
                 use_bias=True,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=None,
                 xp_module=cp)
 dense_2 = Dense(units=45,
-                activation=LeakyRelu(),
+                activation=LeakyRelu(alpha_value=0.1),
                 use_bias=True,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=None,
                 xp_module=cp)
 dense_3 = Dense(units=10,
-                activation=LeakyRelu(),
+                activation=LeakyRelu(alpha_value=0.1),
                 use_bias=True,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
@@ -67,15 +70,18 @@ softmax = SoftMax()
 dropout_1 = InvertedDropout(keep_prob=0.8)
 dropout_2 = InvertedDropout(keep_prob=0.6)
 
-pwc_d = PiecewiseConstantDecay(boundaries=[20000, 40000, 50000, 80000],
-                               values=[0.15, 0.07, 0.01, 0.005])
-
-m = Model(input_layer=input_l, hidden_layers=[dense_1, dropout_1, dense_2, dense_3, softmax])
-m.compile(optimizer=SGD(momentum=0.9, schedular=pwc_d), loss=CrossEntropy(), metrics=[Accuracy()])
+# pwc_d = PiecewiseConstantDecay(boundaries=[10000, 20000, 40000, 50000, 80000],
+#                                values=[0.2, 0.15, 0.01, 0.005, 0.001])
+exp_d = ExponentialDecay(learning_rate=0.18,
+                         decay_steps=10000,
+                         decay_rate=0.96)
+bn1 = BatchNorm(vectors_size=45)
+m = Model(input_layer=input_l, hidden_layers=[dense_1, dense_2, dense_3, softmax])
+m.compile(optimizer=SGD(momentum=0.9, schedular=exp_d), loss=CrossEntropy(), metrics=[Accuracy()])
 m.fit(y_train=y_train,
       x_train=x_train,
-      epochs=800,
-      batch_size=512,
+      epochs=400,
+      batch_size=1024,
       validation_data=(x_test, y_test),
       shuffle=True)
 

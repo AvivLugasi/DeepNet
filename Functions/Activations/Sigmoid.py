@@ -18,7 +18,7 @@ class Sigmoid(Activation):
         else:
             return gpu_expit(x)
 
-    def derivative(self, x):
+    def derivative(self, x, **kwargs):
         """
         Calculate sigmoid derivative: sigmoid(x) * (1 - sigmoid(x))
         :param x: The linear combination of W*X + b of a neuron

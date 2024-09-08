@@ -12,8 +12,9 @@ import numpy as np
 from typing import Union, Literal
 
 from Optimizers.Optimizer import Optimizer
+from Structures.Layers.BatchNorm import BatchNorm
 from Structures.Layers.Layer import Layer
-from System.Utils.Validations import validate_xp_module, validate_positive_int
+from System.Utils.Validations import validate_xp_module, validate_positive_int, validate_bool_val
 from Structures.Layers.Consts import DEFAULT_DENSE_LAYER_UNITS
 
 
@@ -25,7 +26,8 @@ class Dense(Layer):
                  weights_init_method: Union[Literal[INITIALIZERS_VALID_VALUES], Initializer] = GlorotUniform(),
                  bias_init_method: Union[Literal[INITIALIZERS_VALID_VALUES], Initializer] = Zeroes(),
                  weights_regularizer=None,
-                 xp_module=cp):
+                 xp_module=cp,
+                 batchnorm: BatchNorm = None):
         self.xp_module = validate_xp_module(xp=xp_module)
 
         self.units = validate_positive_int(units)
@@ -53,6 +55,7 @@ class Dense(Layer):
         self.weighted_input_mat = None
         self.activated_weighted_input = None
         self.gradient = None
+        self.batchnorm = batchnorm
 
     def _init_bias_mat(self, bias_init_method: Union[Literal[INITIALIZERS_VALID_VALUES], Initializer]):
         bias_mat_init_method = bias_init_method if isinstance(bias_init_method, Initializer) \
@@ -74,11 +77,17 @@ class Dense(Layer):
         else:
             bias_term = 0
         self.weighted_input_mat = self.xp_module.dot(self.weights_mat, input_mat) + bias_term
+        if self.batchnorm is not None:
+            self.weighted_input_mat = self.batchnorm.forward_pass(input_mat=self.weighted_input_mat)
         self.activated_weighted_input = self.activation_func.activate(self.weighted_input_mat)
         return self.activated_weighted_input
 
     def backward_pass(self, grads: Union[np.ndarray, cp.ndarray], optimizer):
-        hidden_layer_error = grads * self.activation_func.derivative(x=self.weighted_input_mat)
+        hidden_layer_error = grads * self.activation_func.derivative(x=self.weighted_input_mat,
+                                                                     optimizer=optimizer,
+                                                                     grads=grads)
+        if self.batchnorm is not None:
+            hidden_layer_error = self.batchnorm.backward_pass(grads=hidden_layer_error, optimizer=optimizer)
         weights_gradients = self.xp_module.dot(hidden_layer_error, self.input_mat.T) / self.input_mat.shape[1]
         gradient_to_return = self.xp_module.dot(self.weights_mat.T, hidden_layer_error)
         self.update_weights(bias_gradients=cp.mean(hidden_layer_error, axis=1, keepdims=True),
@@ -107,3 +116,10 @@ class Dense(Layer):
                     raise TypeError("Missing required keyword argument: 'bias_gradients'")
         else:
             raise TypeError("Missing required keyword arguments: 'optimizer' and or 'weights_gradients'")
+
+    def set_mod(self, is_training: bool):
+        if validate_bool_val(val=is_training):
+            if self.batchnorm is not None:
+                self.batchnorm.set_mod(is_training=is_training)
+        else:
+            raise ValueError(f"is_training must be a bool, instead got {is_training}")

@@ -14,6 +14,7 @@ from Optimizers.Optimizer import Optimizer
 from Optimizers.SGD import SGD
 from Optimizers.Utils import return_optimizer_from_str
 from Structures.Layers.Consts import CROSS_ENTROPY_AFTER_SOFTMAX_FUNC
+from Structures.Layers.Dense import Dense
 from Structures.Layers.Dropout import _DropoutBase
 from Structures.Layers.Input import Input
 from Structures.Layers.Layer import Layer
@@ -270,5 +271,4 @@ class Model:
 
     def set_mode(self, is_training: bool = True):
         for layer in self.hidden_layers:
-            if isinstance(layer, _DropoutBase):
-                layer.set_mod(is_training=is_training)
+            layer.set_mod(is_training=is_training)

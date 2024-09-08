@@ -13,7 +13,7 @@ class Tanh(Activation):
         xp = cp.get_array_module(x)
         return xp.tanh(x)
 
-    def derivative(self, x):
+    def derivative(self, x, **kwargs):
         """
         Calculate Hyperbolic tangent derivative: 1 - ((exp(x) - exp(-x))/(exp(x) + exp(-x)))^2
         :param x: The linear combination of W*X + b of a neuron

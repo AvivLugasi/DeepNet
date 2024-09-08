@@ -14,7 +14,7 @@ class Linear(Activation):
         """
         return self.a * x
 
-    def derivative(self, x):
+    def derivative(self, x, **kwargs):
         """
         return a where a is a constant
         :param x: The linear combination of W*X + b of a neuron

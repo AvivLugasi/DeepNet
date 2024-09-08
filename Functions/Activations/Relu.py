@@ -12,7 +12,7 @@ class Relu(Activation):
         xp = cp.get_array_module(x)
         return xp.maximum(x, 0)
 
-    def derivative(self, x):
+    def derivative(self, x, **kwargs):
         """
         return 1 when x > 0, return 0 otherwise
         :param x: The linear combination of W*X + b of a neuron

@@ -16,3 +16,6 @@ class Layer(ABC):
 
     def update_weights(self, **kwargs):
         raise NotImplementedError("Subclasses should implement this method.")
+
+    def set_mod(self, *args, **kwargs):
+        pass
