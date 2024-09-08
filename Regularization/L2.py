@@ -22,6 +22,10 @@ class L2(Regularizer):
         """
         return self.l2 * x
 
+    def cost(self, x: Union[np.ndarray, cp.ndarray]):
+        xp = cp.get_array_module(x)
+        return self.l2 * xp.sum(x**2)
+
     def get_config(self):
         """
         Return the regularizer config

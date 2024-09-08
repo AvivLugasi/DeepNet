@@ -43,6 +43,7 @@ class Model:
         self.loss = None
         self.optimizer = None
         self.metrics = None
+        self.reguliarizer_cost = 0
 
     def add_layer(self, layer: Layer):
         """
@@ -67,6 +68,9 @@ class Model:
         x = inputs
         for layer in self.hidden_layers:
             x = layer.forward_pass(x)
+            if len(x) == 2:
+                self.reguliarizer_cost += x[1]
+                x = x[0]
         return x
 
     def backward(self, loss_grad):
@@ -136,6 +140,7 @@ class Model:
         :param validation_data:
         :param shuffle:
         """
+        self.reguliarizer_cost = 0
         if x_train is not None and y_train is not None:
             self.input_layer.set_data(data_x=x_train, data_y=y_train)
 
@@ -190,6 +195,8 @@ class Model:
                 # batch loss calculation
                 batch_loss = self.loss.loss(ground_truth=batch_y,
                                             predictions=output)
+                batch_loss += self.reguliarizer_cost
+                self.reguliarizer_cost = 0
                 total_loss += batch_loss
 
                 # backward pass
@@ -221,6 +228,8 @@ class Model:
             val_output = self.forward(inputs=validation_x)
             val_loss = self.loss.loss(ground_truth=validation_y,
                                       predictions=val_output)
+            val_loss += self.reguliarizer_cost
+            self.reguliarizer_cost = 0
             print(f"Epoch {epoch} - Validation Loss: {val_loss:.8f}")
             if self.input_layer.shuffle_in_every_epoch:
                 self.input_layer.batches_queue = None
@@ -239,6 +248,7 @@ class Model:
         :param y_test: Test targets.
         :return: Performance metrics (e.g., loss, accuracy).
         """
+        self.reguliarizer_cost = 0
         self.set_mode(is_training=False)
         if not samples_as_cols:
             y_test = y_test.T
@@ -246,6 +256,8 @@ class Model:
         predictions = self.forward(inputs=x_test)
         loss = self.loss.loss(ground_truth=y_test,
                               predictions=predictions)
+        loss += self.reguliarizer_cost
+        self.reguliarizer_cost = 0
         print(f"{self.loss.config()} loss is:{loss:.3f}")
         for metric in self.metrics:
             score = metric.score(ground_truth=y_test,
@@ -267,7 +279,9 @@ class Model:
         if not samples_as_cols:
             x = x.T
 
-        return self.forward(inputs=x)
+        output = self.forward(inputs=x)
+        self.reguliarizer_cost = 0
+        return output
 
     def set_mode(self, is_training: bool = True):
         for layer in self.hidden_layers:

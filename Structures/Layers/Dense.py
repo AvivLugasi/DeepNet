@@ -12,6 +12,7 @@ import numpy as np
 from typing import Union, Literal
 
 from Optimizers.Optimizer import Optimizer
+from Regularization.Regularizer import Regularizer
 from Structures.Layers.BatchNorm import BatchNorm
 from Structures.Layers.Layer import Layer
 from System.Utils.Validations import validate_xp_module, validate_positive_int, validate_bool_val
@@ -25,7 +26,7 @@ class Dense(Layer):
                  use_bias: bool = True,
                  weights_init_method: Union[Literal[INITIALIZERS_VALID_VALUES], Initializer] = GlorotUniform(),
                  bias_init_method: Union[Literal[INITIALIZERS_VALID_VALUES], Initializer] = Zeroes(),
-                 weights_regularizer=None,
+                 weights_regularizer: Regularizer = None,
                  xp_module=cp,
                  batchnorm: BatchNorm = None):
         self.xp_module = validate_xp_module(xp=xp_module)
@@ -80,7 +81,11 @@ class Dense(Layer):
         if self.batchnorm is not None:
             self.weighted_input_mat = self.batchnorm.forward_pass(input_mat=self.weighted_input_mat)
         self.activated_weighted_input = self.activation_func.activate(self.weighted_input_mat)
-        return self.activated_weighted_input
+        if self.weights_regularizer is None:
+            regularizer_cost = 0
+        else:
+            regularizer_cost = self.weights_regularizer.cost(self.weights_mat)
+        return [self.activated_weighted_input, regularizer_cost]
 
     def backward_pass(self, grads: Union[np.ndarray, cp.ndarray], optimizer):
         hidden_layer_error = grads * self.activation_func.derivative(x=self.weighted_input_mat,

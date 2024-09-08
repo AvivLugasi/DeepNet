@@ -65,7 +65,7 @@ dense_2 = Dense(units=16,
                 xp_module=cp,
                 batchnorm=BatchNorm(vectors_size=16))
 dense_3 = Dense(units=10,
-                activation=LeakyRelu(alpha_value=0.1),
+                activation=LeakyRelu(alpha_value=0.05),
                 use_bias=False,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),

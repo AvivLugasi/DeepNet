@@ -17,6 +17,10 @@ class L1(Regularizer):
         d_l1 = xp.where(x > 0, self.l1, -self.l1)
         return d_l1
 
+    def cost(self, x: Union[np.ndarray, cp.ndarray]):
+        xp = cp.get_array_module(x)
+        return self.l1 * xp.sum(xp.abs(x))
+
     def get_config(self):
         """
         Return the regularizer config

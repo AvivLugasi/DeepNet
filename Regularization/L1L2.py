@@ -26,6 +26,9 @@ class L1L2(Regularizer):
         # Apply both L1 and L2 regularizations
         return self.l1(x) + self.l2(x)
 
+    def cost(self, x: Union[np.ndarray, cp.ndarray]):
+        return self.l1.cost(x) + self.l2.cost(x)
+
     def get_config(self):
         """
         Return the regularizer config
