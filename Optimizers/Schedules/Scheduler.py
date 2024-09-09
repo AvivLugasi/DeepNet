@@ -12,6 +12,9 @@ class Schedular(ABC):
         else:
             raise ValueError(f"learning_rate must be positive float instead got {learning_rate}")
 
+    def __call__(self, *args, **kwargs):
+        return self.learning_rate
+
     def update(self, *args, **kwargs):
         """
         Apply update to the optimizer learning rate

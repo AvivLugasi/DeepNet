@@ -55,22 +55,22 @@ y_train = feature_one_hot(mat=y_train, feature_row=0)
 y_test = feature_one_hot(mat=y_test, feature_row=0)
 print(y_train.shape)
 input_l = Input(features_are_rows=True)
-dense_1 = Dense(units=40,
+dense_1 = Dense(units=80,
                 activation=LeakyRelu(alpha_value=0.1),
                 use_bias=False,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=L2(),
                 xp_module=cp,
-                batchnorm=BatchNorm(vectors_size=40))
-dense_2 = Dense(units=40,
+                batchnorm=BatchNorm(vectors_size=80))
+dense_2 = Dense(units=80,
                 activation=LeakyRelu(alpha_value=0.1),
                 use_bias=False,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=L2(),
                 xp_module=cp,
-                batchnorm=BatchNorm(vectors_size=40))
+                batchnorm=BatchNorm(vectors_size=80))
 dense_3 = Dense(units=10,
                 activation=LeakyRelu(alpha_value=0.05),
                 use_bias=False,
@@ -85,15 +85,15 @@ dropout_2 = InvertedDropout(keep_prob=0.6)
 
 # pwc_d = PiecewiseConstantDecay(boundaries=[5000, 10000, 15000, 20000],
 #                                values=[0.15, 0.1, 0.05, 0.01])
-exp_d = ExponentialDecay(learning_rate=0.18,
+exp_d = ExponentialDecay(learning_rate=0.13,
                          decay_steps=8000,
                          decay_rate=0.95)
 bn1 = BatchNorm(vectors_size=45)
 m = Model(input_layer=input_l, hidden_layers=[dense_1, dense_2, dense_3, softmax])
-m.compile(optimizer=SGD(momentum=0.9, schedular=exp_d), loss=CrossEntropy(), metrics=[Accuracy()])
+m.compile(optimizer=SGD(momentum=0.9, init_learning_rate=exp_d), loss=CrossEntropy(), metrics=[Accuracy()])
 m.fit(y_train=y_train,
       x_train=x_train,
-      epochs=100,
+      epochs=250,
       batch_size=1024,
       validation_split=0.2,
       shuffle=True)

@@ -1,4 +1,6 @@
 from abc import ABC
+from typing import Union
+
 from Optimizers.Consts import INITIAL_LEARNING_RATE
 from Optimizers.Schedules.Scheduler import Schedular
 from System.Utils.Validations import validate_number_in_range, validate_positive
@@ -6,23 +8,17 @@ from System.Utils.Validations import validate_number_in_range, validate_positive
 
 class Optimizer(ABC):
     def __init__(self,
-                 init_learning_rate: float = INITIAL_LEARNING_RATE,
-                 momentum: float = 0.0,
-                 schedular: Schedular = None):
+                 init_learning_rate: Union[float, Schedular] = INITIAL_LEARNING_RATE,
+                 momentum: float = 0.0):
         if init_learning_rate is not None:
-            if validate_positive(init_learning_rate):
+            if (isinstance(init_learning_rate, float) and validate_positive(init_learning_rate)) \
+                    or isinstance(init_learning_rate, Schedular):
                 self.learning_rate = init_learning_rate
             else:
-                raise ValueError(f"init_learning_rate must be positive float instead got {init_learning_rate}")
-        if schedular is None or isinstance(schedular, Schedular):
-            self.schedular = schedular
-            if schedular is not None:
-                self.learning_rate = self.schedular.learning_rate
+                raise ValueError(f"init_learning_rate must be positive float or "
+                                 f"Schedular instead got {init_learning_rate}")
         else:
-            raise ValueError(f"schedular must be None or inherit from the Schedular class instead got:{schedular.__class__}")
-
-        if init_learning_rate is None and schedular is None:
-            raise ValueError("both schedular and init_learning_rate cant be None, only one of them")
+            raise ValueError("init_learning_rate cant be None")
 
         if validate_number_in_range(n=momentum,
                                     include_lower=True,
@@ -44,5 +40,15 @@ class Optimizer(ABC):
         return {"learning_rate": self.learning_rate}
 
     def update_learning_rate(self, *args, **kwargs):
-        if self.schedular is not None:
-            self.learning_rate = self.schedular.update(*args, **kwargs)
+        if isinstance(self.learning_rate, Schedular):
+            self.learning_rate.update(*args, **kwargs)
+
+    def get_velocity(self, gradients, regularizer=0, velocity=0):
+        return self.momentum * velocity + (1 - self.momentum) * (gradients + regularizer)
+
+    def get_learning_rate(self):
+        if callable(self.learning_rate):
+            lr = self.learning_rate()  # Call it if it's a function or callable object
+        else:
+            lr = self.learning_rate  # Use it directly if it's a float
+        return lr
