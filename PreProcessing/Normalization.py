@@ -10,10 +10,10 @@ def mean_subtraction(input_mat: Union[np.ndarray, cp.ndarray],
                      return_computed_mean: bool = False):
     xp = cp.get_array_module(input_mat)
     mean = xp.mean(input_mat, axis=axis, keepdims=True)
-    input_mat -= mean
+    mean_subtracted = input_mat - mean
     if not return_computed_mean:
-        return input_mat
-    return input_mat, mean
+        return mean_subtracted
+    return mean_subtracted, mean
 
 
 def std_div_normalization(input_mat: Union[np.ndarray, cp.ndarray],
@@ -22,11 +22,11 @@ def std_div_normalization(input_mat: Union[np.ndarray, cp.ndarray],
     xp = cp.get_array_module(input_mat)
     std = xp.std(input_mat, axis=axis, keepdims=True)
     # avoid division by 0 if std is 0
-    std = xp.where(std == 0, EPSILON, std)
-    input_mat /= std
+    std += EPSILON
+    input_std_divided = input_mat / std
     if not return_computed_std:
-        return input_mat
-    return input_mat, std
+        return input_std_divided
+    return input_std_divided, std
 
 
 def minmax_scalar(input_mat: Union[np.ndarray, cp.ndarray],
@@ -43,18 +43,14 @@ def minmax_scalar(input_mat: Union[np.ndarray, cp.ndarray],
 def standardization(input_mat: Union[np.ndarray, cp.ndarray],
                     axis: int = 1,
                     return_params: bool = False):
+    _, mean = mean_subtraction(input_mat=input_mat,
+                               axis=axis,
+                               return_computed_mean=True)
+    _, std = std_div_normalization(input_mat=input_mat,
+                                   axis=axis,
+                                   return_computed_std=True)
+    standardized_input = (input_mat - mean) / (std + EPSILON)
     if return_params:
-        zero_centered_input, mean = mean_subtraction(input_mat=input_mat,
-                                                     axis=axis,
-                                                     return_computed_mean=return_params)
-        scaled_by_std_input, std = std_div_normalization(input_mat=zero_centered_input,
-                                                         axis=axis,
-                                                         return_computed_std=return_params)
-        return scaled_by_std_input, mean, std
+        return standardized_input, mean, std
     else:
-        zero_centered_input = mean_subtraction(input_mat=input_mat,
-                                               axis=axis)
-        scaled_by_std_input = std_div_normalization(input_mat=zero_centered_input,
-                                                    axis=axis)
-
-        return scaled_by_std_input
+        return standardized_input

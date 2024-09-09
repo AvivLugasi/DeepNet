@@ -55,22 +55,22 @@ y_train = feature_one_hot(mat=y_train, feature_row=0)
 y_test = feature_one_hot(mat=y_test, feature_row=0)
 print(y_train.shape)
 input_l = Input(features_are_rows=True)
-dense_1 = Dense(units=800,
+dense_1 = Dense(units=40,
                 activation=LeakyRelu(alpha_value=0.1),
                 use_bias=False,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=L2(),
                 xp_module=cp,
-                batchnorm=BatchNorm(vectors_size=800))
-dense_2 = Dense(units=800,
+                batchnorm=BatchNorm(vectors_size=40))
+dense_2 = Dense(units=40,
                 activation=LeakyRelu(alpha_value=0.1),
                 use_bias=False,
                 weights_init_method=HeUniform(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=L2(),
                 xp_module=cp,
-                batchnorm=BatchNorm(vectors_size=800))
+                batchnorm=BatchNorm(vectors_size=40))
 dense_3 = Dense(units=10,
                 activation=LeakyRelu(alpha_value=0.05),
                 use_bias=False,

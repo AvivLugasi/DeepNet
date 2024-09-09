@@ -8,7 +8,7 @@ from Initializers.Initializer import Initializer
 from Initializers.Utils import return_initializer_from_str
 from Initializers.Zeroes import Zeroes
 from Optimizers.Optimizer import Optimizer
-from PreProcessing.Normalization import EPSILON, mean_subtraction, std_div_normalization
+from PreProcessing.Normalization import EPSILON, standardization
 from Structures.Layers.Consts import DEFAULT_DENSE_LAYER_UNITS
 from Structures.Layers.Layer import Layer
 from System.Utils.Validations import validate_positive_int, validate_xp_module, validate_bool_val, \
@@ -76,12 +76,9 @@ class BatchNorm(Layer):
         self.input = input_mat
         if self._training_mod:
             # compute normalized input at train
-            self.zero_centered_input, self.batch_mean = mean_subtraction(input_mat=input_mat,
-                                                                         axis=self.axis,
-                                                                         return_computed_mean=True)
-            self.normalized_input, self.batch_std = std_div_normalization(input_mat=self.zero_centered_input,
-                                                                          axis=self.axis,
-                                                                          return_computed_std=True)
+            self.normalized_input, self.batch_mean, self.batch_std = standardization(input_mat=self.input,
+                                                                                     axis=self.axis,
+                                                                                     return_params=True)
             # update moving mean and std
             self.moving_mean = self.moving_mean * self.momentum + self.batch_mean * (1 - self.momentum)
             self.moving_std = self.moving_std * self.momentum + self.batch_std * (1 - self.momentum)
@@ -100,7 +97,7 @@ class BatchNorm(Layer):
         self.update_weights(gamma_grads=gamma_grads, beta_grads=beta_grads, optimizer=optimizer)
         # return gradient of x
         d_y_x_normalized = grads * self.gamma_vec
-        inv_var = 1 / ((self.batch_std ** 2 + EPSILON) ** 0.5)
+        inv_var = 1 / self.xp_module.sqrt(self.batch_std**2 + EPSILON)
         m = self.input.shape[self.samples_size_index]
         d_x = (1. / m) * inv_var * (m * d_y_x_normalized - self.xp_module.sum(d_y_x_normalized,
                                                                               axis=self.axis,
