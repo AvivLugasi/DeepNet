@@ -1,4 +1,7 @@
 from typing import Literal
+
+from Optimizers.Adagrad import Adagrad
+from Optimizers.Adam import Adam
 from Optimizers.Consts import OPTIMIZERS_VALID_FUNCTIONS, INITIAL_LEARNING_RATE
 from Optimizers.RMSprop import RMSprop
 from Optimizers.SGD import SGD
@@ -12,3 +15,7 @@ def return_optimizer_from_str(optimizer_name: Literal[OPTIMIZERS_VALID_FUNCTIONS
             return SGD(init_learning_rate=INITIAL_LEARNING_RATE)
         elif optimizer_name == OPTIMIZERS_VALID_FUNCTIONS[1]:
             return RMSprop(init_learning_rate=INITIAL_LEARNING_RATE)
+        elif optimizer_name == OPTIMIZERS_VALID_FUNCTIONS[2]:
+            return Adagrad(init_learning_rate=INITIAL_LEARNING_RATE)
+        else:
+            return Adam(init_learning_rate=INITIAL_LEARNING_RATE)

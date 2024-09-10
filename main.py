@@ -13,6 +13,7 @@ from Functions.Metrics.Accuracy import Accuracy
 from Initializers.GlorotHeInitializers import GlorotNormal, HeNormal, GlorotUniform, HeUniform
 from Initializers.Zeroes import Zeroes
 from Optimizers.Adagrad import Adagrad
+from Optimizers.Adam import Adam
 from Optimizers.RMSprop import RMSprop
 from Optimizers.SGD import SGD
 from Optimizers.Schedules.CosineDecay import CosineDecay
@@ -58,29 +59,29 @@ y_train = feature_one_hot(mat=y_train, feature_row=0)
 y_test = feature_one_hot(mat=y_test, feature_row=0)
 print(y_train.shape)
 input_l = Input(features_are_rows=True)
-dense_1 = Dense(units=80,
+dense_1 = Dense(units=30,
                 activation=LeakyRelu(alpha_value=0.1),
                 use_bias=False,
                 weights_init_method=HeNormal(),
                 bias_init_method=Zeroes(),
-                weights_regularizer=L2(),
                 xp_module=cp,
-                batchnorm=BatchNorm(vectors_size=80))
-dense_2 = Dense(units=80,
+                weights_regularizer=L2(),
+                batchnorm=BatchNorm(vectors_size=30))
+dense_2 = Dense(units=30,
                 activation=LeakyRelu(alpha_value=0.1),
                 use_bias=False,
                 weights_init_method=HeNormal(),
                 bias_init_method=Zeroes(),
-                weights_regularizer=L2(),
                 xp_module=cp,
-                batchnorm=BatchNorm(vectors_size=80))
+                weights_regularizer=L2(),
+                batchnorm=BatchNorm(vectors_size=30))
 dense_3 = Dense(units=10,
-                activation=Relu(),
+                activation=Elu(),
                 use_bias=False,
                 weights_init_method=HeNormal(),
                 bias_init_method=Zeroes(),
-                weights_regularizer=L2(),
                 xp_module=cp,
+                weights_regularizer=L2(),
                 batchnorm=BatchNorm(vectors_size=10))
 softmax = SoftMax()
 dropout_1 = InvertedDropout(keep_prob=0.8)
@@ -93,16 +94,19 @@ exp_d = ExponentialDecay(learning_rate=0.13,
                          decay_rate=0.95)
 sgd = SGD(momentum=0.9, init_learning_rate=exp_d)
 rmsprop = RMSprop(init_learning_rate=exp_d,
-                  rmsprop_momentum=0.90,
+                  optimizer_momentum=0.90,
                   momentum=0.9)
 adgrad = Adagrad(init_learning_rate=0.95,
                  momentum=0.9)
-m = Model(input_layer=input_l, hidden_layers=[dense_1, dense_2, dense_3, softmax])
-m.compile(optimizer=rmsprop, loss=CrossEntropy(), metrics=[Accuracy()])
+adam = Adam(init_learning_rate=0.15,
+            momentum=0.9,
+            optimizer_momentum=0.999)
+m = Model(input_layer=input_l, hidden_layers=[dense_1, dense_2, dense_3, SoftMax()])
+m.compile(optimizer=adam, loss=CrossEntropy(), metrics=[Accuracy()])
 m.fit(y_train=y_train,
       x_train=x_train,
-      epochs=85,
-      batch_size=1024,
+      epochs=50,
+      batch_size=512,
       validation_split=0.2,
       shuffle=True)
 

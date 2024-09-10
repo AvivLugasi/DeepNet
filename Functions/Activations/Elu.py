@@ -4,8 +4,7 @@ import cupy as cp
 
 class Elu(Activation):
     def __init__(self,
-                 alpha_value: float = 0.01,
-                 is_constant: bool = False):
+                 alpha_value: float = 0.01):
         # Ensure starting_alpha_value is a positive float
         if alpha_value <= 0:
             raise ValueError("alpha_value must be a positive float.")
