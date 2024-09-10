@@ -43,8 +43,8 @@ class Optimizer(ABC):
         if isinstance(self.learning_rate, Schedular):
             self.learning_rate.update(*args, **kwargs)
 
-    def get_velocity(self, gradients, regularizer=0, velocity=0):
-        return self.momentum * velocity + (1 - self.momentum) * (gradients + regularizer)
+    def get_velocity_of_momentum(self, gradients, velocity=0):
+        return self.momentum * velocity + (1 - self.momentum) * gradients
 
     def get_learning_rate(self):
         if callable(self.learning_rate):

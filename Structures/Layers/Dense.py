@@ -115,8 +115,8 @@ class Dense(Layer):
         if optimizer is not None and isinstance(optimizer, Optimizer) and weights_gradients is not None:
             self.weights_mat, self.v_weights = optimizer.apply_gradients(gradients=weights_gradients,
                                                                          variables=self.weights_mat,
-                                                                         regularizer=regularizer_term,
-                                                                         velocity=self.v_weights)
+                                                                         velocity=self.v_weights,
+                                                                         regularizer=regularizer_term,)
             if self.bias_mat is not None:
                 if bias_gradients is not None:
                     self.bias_mat, self.v_bias = optimizer.apply_gradients(gradients=bias_gradients,

@@ -26,9 +26,6 @@ class BatchNorm(Layer):
                  moving_mean_initializer: Union[Literal[INITIALIZERS_VALID_VALUES], Initializer] = Zeroes(),
                  moving_std_initializer: Union[Literal[INITIALIZERS_VALID_VALUES], Initializer] = Constants(),
                  xp_module=cp):
-        # velocity of gamma and beta
-        self.v_gamma = 0
-        self.v_beta = 0
         # cache variables for back prop stage
         self.gemma_x = None
         self.batch_std = None
@@ -42,6 +39,9 @@ class BatchNorm(Layer):
         vectors_size = validate_positive_int(vectors_size)
         self.beta_vec = self._init_vector(initializer=beta_initializer, vectors_size=vectors_size)
         self.gamma_vec = self._init_vector(initializer=gamma_initializer, vectors_size=vectors_size)
+        # velocity of gamma and beta
+        self.v_gamma = 0
+        self.v_beta = 0
         self.moving_mean = self._init_vector(initializer=moving_mean_initializer, vectors_size=vectors_size)
         self.moving_std = self._init_vector(initializer=moving_std_initializer, vectors_size=vectors_size)
         self.axis = axis
@@ -116,4 +116,5 @@ class BatchNorm(Layer):
                                                                  variables=self.gamma_vec,
                                                                  velocity=self.v_gamma)
         self.beta_vec, self.v_beta = optimizer.apply_gradients(gradients=beta_grads,
-                                                               variables=self.beta_vec)
+                                                               variables=self.beta_vec,
+                                                               velocity=self.v_beta)

@@ -3,6 +3,7 @@ import pandas as pd
 
 from Functions.Activations.Elu import Elu
 from Functions.Activations.LeakyRelu import LeakyRelu
+from Functions.Activations.Relu import Relu
 from Functions.Activations.Sigmoid import Sigmoid
 from Functions.Activations.Tanh import Tanh
 from Functions.Losses.BinaryCrossEntropy import BinaryCrossEntropy
@@ -11,6 +12,8 @@ from Functions.Losses.MSE import MSE
 from Functions.Metrics.Accuracy import Accuracy
 from Initializers.GlorotHeInitializers import GlorotNormal, HeNormal, GlorotUniform, HeUniform
 from Initializers.Zeroes import Zeroes
+from Optimizers.Adagrad import Adagrad
+from Optimizers.RMSprop import RMSprop
 from Optimizers.SGD import SGD
 from Optimizers.Schedules.CosineDecay import CosineDecay
 from Optimizers.Schedules.ExponentialDecay import ExponentialDecay
@@ -58,7 +61,7 @@ input_l = Input(features_are_rows=True)
 dense_1 = Dense(units=80,
                 activation=LeakyRelu(alpha_value=0.1),
                 use_bias=False,
-                weights_init_method=HeUniform(),
+                weights_init_method=HeNormal(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=L2(),
                 xp_module=cp,
@@ -66,15 +69,15 @@ dense_1 = Dense(units=80,
 dense_2 = Dense(units=80,
                 activation=LeakyRelu(alpha_value=0.1),
                 use_bias=False,
-                weights_init_method=HeUniform(),
+                weights_init_method=HeNormal(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=L2(),
                 xp_module=cp,
                 batchnorm=BatchNorm(vectors_size=80))
 dense_3 = Dense(units=10,
-                activation=LeakyRelu(alpha_value=0.05),
+                activation=Relu(),
                 use_bias=False,
-                weights_init_method=HeUniform(),
+                weights_init_method=HeNormal(),
                 bias_init_method=Zeroes(),
                 weights_regularizer=L2(),
                 xp_module=cp,
@@ -88,12 +91,17 @@ dropout_2 = InvertedDropout(keep_prob=0.6)
 exp_d = ExponentialDecay(learning_rate=0.13,
                          decay_steps=8000,
                          decay_rate=0.95)
-bn1 = BatchNorm(vectors_size=45)
+sgd = SGD(momentum=0.9, init_learning_rate=exp_d)
+rmsprop = RMSprop(init_learning_rate=exp_d,
+                  rmsprop_momentum=0.90,
+                  momentum=0.9)
+adgrad = Adagrad(init_learning_rate=0.95,
+                 momentum=0.9)
 m = Model(input_layer=input_l, hidden_layers=[dense_1, dense_2, dense_3, softmax])
-m.compile(optimizer=SGD(momentum=0.9, init_learning_rate=exp_d), loss=CrossEntropy(), metrics=[Accuracy()])
+m.compile(optimizer=rmsprop, loss=CrossEntropy(), metrics=[Accuracy()])
 m.fit(y_train=y_train,
       x_train=x_train,
-      epochs=250,
+      epochs=85,
       batch_size=1024,
       validation_split=0.2,
       shuffle=True)

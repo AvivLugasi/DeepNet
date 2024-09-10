@@ -12,6 +12,6 @@ class SGD(Optimizer):
         super().__init__(init_learning_rate=init_learning_rate,
                          momentum=momentum)
 
-    def apply_gradients(self, gradients, variables, regularizer=0, velocity=0):
-        velocity = self.get_velocity(gradients, regularizer, velocity)
-        return (variables - self.get_learning_rate() * velocity), velocity
+    def apply_gradients(self, gradients, variables, velocity=0, regularizer=0):
+        velocity = self.get_velocity_of_momentum(gradients, velocity)
+        return (variables - self.get_learning_rate() * (velocity + regularizer)), velocity
