@@ -18,18 +18,21 @@ class _DropoutBase(Layer, ABC):
                  seed=None):
         self.set_keep_prob(keep_prob)
         self.seed = seed
+        self.mask = None
         self._training_mod = True
 
     def backward_pass(self, *args, **kwargs):
-        return kwargs.get('grads')
+        grads = kwargs.get('grads')
+        xp = cp.get_array_module(grads)
+        return xp.multiply(grads, self.mask)
 
     def binary_mask(self, input_mat: Union[np.ndarray, cp.ndarray]):
         xp = cp.get_array_module(input_mat)
         xp.random.seed(seed=self.seed)
-        dropout_mat = xp.random.binomial(n=1,
-                                         p=self._keep_prob,
-                                         size=input_mat.shape)
-        input_mat_masked = xp.multiply(input_mat, dropout_mat)
+        self.mask = xp.random.binomial(n=1,
+                                       p=self._keep_prob,
+                                       size=input_mat.shape)
+        input_mat_masked = xp.multiply(input_mat, self.mask)
         return input_mat_masked
 
     def set_keep_prob(self, keep_prob: float = 0.5):

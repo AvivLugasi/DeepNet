@@ -21,7 +21,7 @@ from Optimizers.Schedules.ExponentialDecay import ExponentialDecay
 from Optimizers.Schedules.InverseTimeDecay import InverseTimeDecay
 from Optimizers.Schedules.PiecewiseConstantDecay import PiecewiseConstantDecay
 from PreProcessing.Features_encoding import feature_one_hot
-from PreProcessing.Normalization import standardization
+from PreProcessing.Normalization import standardization, EPSILON
 from sklearn.model_selection import train_test_split
 
 from Regularization.L1 import L1
@@ -50,8 +50,8 @@ cp_train = cp.array(np_train, dtype=float)
 cp_test = cp.array(np_test, dtype=float)
 
 x_train, x_test, y_train, y_test = cp_train[:, 1:], cp_test[:, 1:], cp_train[:, 0], cp_test[:, 0]
-x_train = standardization(x_train, axis=0)
-x_test = standardization(x_test, axis=0)
+x_train, mean_train, std_train = standardization(x_train, axis=0, return_params=True)
+x_test = (x_test - mean_train) / (cp.sqrt(std_train**2 + EPSILON))
 
 x_train, x_test, y_train, y_test = x_train.T, x_test.T, y_train.reshape(-1, 1).T, y_test.reshape(-1, 1).T
 y_train, y_test = y_train.astype(cp.int64), y_test.astype(cp.int64)
@@ -60,20 +60,20 @@ y_test = feature_one_hot(mat=y_test, feature_row=0)
 print(y_train.shape)
 input_l = Input(features_are_rows=True)
 dense_1 = Dense(units=30,
-                activation=LeakyRelu(alpha_value=0.1),
+                activation=LeakyRelu(alpha_value=0.05),
                 use_bias=False,
                 weights_init_method=HeNormal(),
                 bias_init_method=Zeroes(),
                 xp_module=cp,
-                weights_regularizer=L2(),
+                weights_regularizer=L2(l2=0.01),
                 batchnorm=BatchNorm(vectors_size=30))
 dense_2 = Dense(units=30,
-                activation=LeakyRelu(alpha_value=0.1),
+                activation=LeakyRelu(alpha_value=0.05),
                 use_bias=False,
                 weights_init_method=HeNormal(),
                 bias_init_method=Zeroes(),
                 xp_module=cp,
-                weights_regularizer=L2(),
+                weights_regularizer=L2(l2=0.01),
                 batchnorm=BatchNorm(vectors_size=30))
 dense_3 = Dense(units=10,
                 activation=Elu(),
@@ -81,10 +81,10 @@ dense_3 = Dense(units=10,
                 weights_init_method=HeNormal(),
                 bias_init_method=Zeroes(),
                 xp_module=cp,
-                weights_regularizer=L2(),
+                weights_regularizer=L2(l2=0.01),
                 batchnorm=BatchNorm(vectors_size=10))
 softmax = SoftMax()
-dropout_1 = InvertedDropout(keep_prob=0.8)
+dropout_1 = InvertedDropout(keep_prob=0.75)
 dropout_2 = InvertedDropout(keep_prob=0.6)
 
 # pwc_d = PiecewiseConstantDecay(boundaries=[5000, 10000, 15000, 20000],

@@ -6,6 +6,9 @@ class Activation(ABC):
     def activate(self, *args, **kwargs):
         pass
 
+    def __call__(self, *args, **kwargs):
+        return self.activate(*args, **kwargs)
+
     @abstractmethod
     def derivative(self, x, **kwargs):
         pass
