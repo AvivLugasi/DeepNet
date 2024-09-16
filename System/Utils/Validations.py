@@ -98,3 +98,7 @@ def validate_positive_decreasing_integer_list(n: list):
                     return False
                 smallest = i
     return True
+
+
+def is_whole_num(x):
+    return x - x // 1 == 0
