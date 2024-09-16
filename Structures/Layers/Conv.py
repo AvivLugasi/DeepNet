@@ -79,17 +79,16 @@ class Conv(Layer):
         batch_size, input_size, depth = get_input_dim(x=input_mat,
                                                       input_depth_index=self.input_depth_index,
                                                       batch_size_index=self.samples_dim_index)
-        padding = self._get_padding_required(input_mat_size=input_size)
-        shape = (batch_size, input_size, 1 * padding, depth) if self.input_depth_index == 3 \
-            else (batch_size, depth, input_size, 1 * padding)
+        shape = (batch_size, input_size, 1 * self.padding, depth) if self.input_depth_index == 3 \
+            else (batch_size, depth, input_size, 1 * self.padding)
         add_right = self.xp_module.zeros(shape=shape, dtype=float)
         add_left = self.xp_module.zeros(shape=shape, dtype=float)
         input_mat = self.xp_module.concatenate((input_mat, add_right), axis=2)
         input_mat = self.xp_module.concatenate((add_left, input_mat), axis=2)
         input_dim_no_depth = input_mat.shape[:self.input_depth_index] + input_mat.shape[self.input_depth_index + 1:]
         input_size = input_dim_no_depth[2]
-        shape = (batch_size, 1 * padding, input_size, depth) if self.input_depth_index == 3 \
-            else (batch_size, depth, 1 * padding, input_size)
+        shape = (batch_size, 1 * self.padding, input_size, depth) if self.input_depth_index == 3 \
+            else (batch_size, depth, 1 * self.padding, input_size)
         add_up = self.xp_module.zeros(shape=shape, dtype=float)
         add_down = self.xp_module.zeros(shape=shape, dtype=float)
         input_mat = self.xp_module.concatenate((input_mat, add_up), axis=1)
@@ -98,10 +97,10 @@ class Conv(Layer):
 
     def _get_padding_required(self, input_mat_size):
         if isinstance(self.padding, str):
-            self.padding = get_padding_from_str(padding_mode=self.padding,
-                                                input_mat_size=input_mat_size,
-                                                filter_dim=self.filter_size,
-                                                strides=self.strides)
+            self.padding = int(get_padding_from_str(padding_mode=self.padding,
+                                                    input_mat_size=input_mat_size,
+                                                    filter_dim=self.filter_size,
+                                                    strides=self.strides))
         return self.padding
 
     def forward_pass(self, input_mat: Union[np.ndarray, cp.ndarray]):
@@ -112,6 +111,7 @@ class Conv(Layer):
             bias_term = self.bias_mat
         else:
             bias_term = 0
+        self.padding = self._get_padding_required(input_mat.shape[2])
         output_size = get_activation_window_size(input_mat_size=input_mat.shape[2],
                                                  filter_dim=self.filter_size,
                                                  strides=self.strides,
@@ -123,7 +123,6 @@ class Conv(Layer):
         output_size = int(output_size)
         if self.padding != 0:
             input_mat = self._add_padding(input_mat)
-
         depth = input_mat.shape[self.input_depth_index]
         batch_size = input_mat.shape[self.samples_dim_index]
         input_mat_im2col = im2col(x=input_mat,
