@@ -9,12 +9,14 @@ from Initializers.GlorotHeInitializers import GlorotUniform
 from Initializers.Initializer import Initializer
 from Initializers.Utils import return_initializer_from_str
 from Initializers.Zeroes import Zeroes
+from Optimizers.SGD import SGD
+from Optimizers.Schedules.ExponentialDecay import ExponentialDecay
 from Regularization.Regularizer import Regularizer
 from Structures.Layers.Consts import CONVOLUTION_PADDING_VALID_VALUES
 from Structures.Layers.Layer import Layer
 import cupy as cp
 import numpy as np
-from Structures.Layers.Utils import get_padding_from_str, im2col, get_input_dim, get_activation_window_size
+from Structures.Layers.Utils import get_padding_from_str, im2col, get_input_dim, get_activation_window_size, col2im
 from System.Utils.Validations import validate_xp_module, validate_positive_int, is_whole_num
 
 
@@ -59,9 +61,11 @@ class Conv(Layer):
 
         self.filters_regularizer = filters_regularizer
 
-        self.input_mat = None
-        self.activation_map = None
-        self.output = None
+        self.input_mat_im2col = None
+        self.activation_map_image_shape = None
+        self.batch_size = None
+        self.num_of_windows_per_sample = None
+        self.input_dim = None
 
     def _init_bias_mat(self, bias_init_method: Union[Literal[INITIALIZERS_VALID_VALUES], Initializer]):
         bias_mat_init_method = bias_init_method if isinstance(bias_init_method, Initializer) \
@@ -70,29 +74,19 @@ class Conv(Layer):
         return bias_mat_init_method.initialize(xp=self.xp_module)
 
     def _init_filters_mat(self, previous_layer_shape: Tuple):
-        shape = (self.filter_size * self.filter_size * previous_layer_shape[self.input_depth_index],
-                 self.num_of_filters)
+        self.input_depth = previous_layer_shape[self.input_depth_index]
+        shape = (self.filter_size * self.filter_size * self.input_depth, self.num_of_filters)
         self.filters_init_method.set_shape(shape=shape)
         self.filters_mat = self.filters_init_method.initialize(xp=self.xp_module)
 
     def _add_padding(self, input_mat: Union[np.ndarray, cp.ndarray]):
-        batch_size, input_size, depth = get_input_dim(x=input_mat,
-                                                      input_depth_index=self.input_depth_index,
-                                                      batch_size_index=self.samples_dim_index)
-        shape = (batch_size, input_size, 1 * self.padding, depth) if self.input_depth_index == 3 \
-            else (batch_size, depth, input_size, 1 * self.padding)
-        add_right = self.xp_module.zeros(shape=shape, dtype=float)
-        add_left = self.xp_module.zeros(shape=shape, dtype=float)
-        input_mat = self.xp_module.concatenate((input_mat, add_right), axis=2)
-        input_mat = self.xp_module.concatenate((add_left, input_mat), axis=2)
-        input_dim_no_depth = input_mat.shape[:self.input_depth_index] + input_mat.shape[self.input_depth_index + 1:]
-        input_size = input_dim_no_depth[2]
-        shape = (batch_size, 1 * self.padding, input_size, depth) if self.input_depth_index == 3 \
-            else (batch_size, depth, 1 * self.padding, input_size)
-        add_up = self.xp_module.zeros(shape=shape, dtype=float)
-        add_down = self.xp_module.zeros(shape=shape, dtype=float)
-        input_mat = self.xp_module.concatenate((input_mat, add_up), axis=1)
-        input_mat = self.xp_module.concatenate((add_down, input_mat), axis=1)
+
+        input_mat = self.xp_module.pad(input_mat,
+                                       ((0, 0),
+                                        (self.padding, self.padding),
+                                        (self.padding, self.padding),
+                                        (0, 0)),
+                                       mode='constant')
         return input_mat
 
     def _get_padding_required(self, input_mat_size):
@@ -104,13 +98,13 @@ class Conv(Layer):
         return self.padding
 
     def forward_pass(self, input_mat: Union[np.ndarray, cp.ndarray]):
-        self.input_mat = input_mat
         if self.filters_mat is None:
             self._init_filters_mat(input_mat.shape)
         if self.bias_mat is not None:
             bias_term = self.bias_mat
         else:
             bias_term = 0
+        self.input_dim = input_mat.shape
         self.padding = self._get_padding_required(input_mat.shape[2])
         output_size = get_activation_window_size(input_mat_size=input_mat.shape[2],
                                                  filter_dim=self.filter_size,
@@ -123,27 +117,79 @@ class Conv(Layer):
         output_size = int(output_size)
         if self.padding != 0:
             input_mat = self._add_padding(input_mat)
+        print(input_mat.shape)
         depth = input_mat.shape[self.input_depth_index]
-        batch_size = input_mat.shape[self.samples_dim_index]
-        input_mat_im2col = im2col(x=input_mat,
-                                  filter_dim=self.filter_size,
-                                  strides=self.strides)
-        self.activation_map = self.xp_module.dot(input_mat_im2col, self.filters_mat) + bias_term
-        new_shape = (batch_size, output_size, output_size, depth) if self.input_depth_index == 3 \
-            else (batch_size, depth, output_size, output_size)
-        activation_map_image_shape = self.activation_map.reshape(new_shape)
-        self.output = self.activation_func.activate(activation_map_image_shape)
+        self.batch_size = input_mat.shape[self.samples_dim_index]
+        self.input_mat_im2col = im2col(x=input_mat,
+                                       filter_dim=self.filter_size,
+                                       strides=self.strides)
+        activation_map = self.xp_module.dot(self.xp_module.transpose(self.input_mat_im2col, (0, 2, 1)),
+                                            self.filters_mat) + bias_term
+        self.num_of_windows_per_sample = activation_map.shape[1]
+        new_shape = (self.batch_size, output_size, output_size, depth) if self.input_depth_index == 3 \
+            else (self.batch_size, depth, output_size, output_size)
+        self.activation_map_image_shape = activation_map.reshape(new_shape)
+        output = self.activation_func.activate(self.activation_map_image_shape)
         if self.filters_regularizer is None:
             regularizer_cost = 0
         else:
             regularizer_cost = self.filters_regularizer.cost(self.filters_mat)
-        return [self.output, regularizer_cost]
+        return [output, regularizer_cost]
 
-    def backward_pass(self, *args, **kwargs):
-        pass
+    def backward_pass(self, grads: Union[np.ndarray, cp.ndarray], optimizer):
+        d_f = grads * self.activation_func.derivative(x=self.activation_map_image_shape,
+                                                      optimizer=optimizer,
+                                                      grads=grads)
+        d_f = d_f.reshape(self.batch_size, self.num_of_windows_per_sample, self.num_of_filters)
+        d_b = self.xp_module.mean(d_f, axis=(0, 1)).reshape(1, 3)
+        d_w = self.xp_module.einsum('ijk,ikl->jl', self.input_mat_im2col, d_f) / self.batch_size
+        d_x = self.xp_module.transpose(self.xp_module.dot(d_f, self.filters_mat.T), (0, 2, 1))
+        self.update_weights(bias_gradients=d_b,
+                            weights_gradients=d_w,
+                            optimizer=optimizer)
+        # d_x = col2im(col_mat=d_x,
+        #              input_shape=self.input_dim,
+        #              filter_dim=self.filter_size,
+        #              stride=self.strides,
+        #              padding=self.padding)
+        return d_x
 
     def update_weights(self, **kwargs):
-        pass
+        optimizer = kwargs.get('optimizer')
+        weights_gradients = kwargs.get('weights_gradients')
+        if self.bias_mat is not None:
+            bias_gradients = kwargs.get('bias_gradients')
+        if self.filters_regularizer is None:
+            regularizer_term = 0
+        else:
+            regularizer_term = self.filters_regularizer(self.filters_mat)
+        self.filters_mat, self.v_filters = optimizer.apply_gradients(gradients=weights_gradients,
+                                                                     variables=self.filters_mat,
+                                                                     velocity=self.v_filters,
+                                                                     regularizer=regularizer_term, )
+        if self.bias_mat is not None:
+            if bias_gradients is not None:
+                self.bias_mat, self.v_bias = optimizer.apply_gradients(gradients=bias_gradients,
+                                                                       variables=self.bias_mat,
+                                                                       velocity=self.v_bias)
+            else:
+                raise TypeError("Missing required keyword argument: 'bias_gradients'")
 
     def set_mod(self, *args, **kwargs):
         pass
+
+
+x = cp.random.randn(4, 32, 32, 3)
+conv = Conv(num_of_filters=3,
+            filter_size=3,
+            strides=1,
+            padding=1)
+
+x_forward = conv.forward_pass(x)
+print(x_forward[0])
+exp_d = ExponentialDecay(learning_rate=0.13,
+                         decay_steps=8000,
+                         decay_rate=0.95)
+sgd = SGD(momentum=0.9, init_learning_rate=exp_d)
+analyticall_gradient = conv.backward_pass(grads=1, optimizer=sgd)
+print(analyticall_gradient.shape)

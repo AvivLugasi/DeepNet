@@ -1,4 +1,4 @@
-from typing import Union, Literal
+from typing import Union, Literal, Tuple
 import numpy as np
 import cupy as cp
 import math
@@ -60,25 +60,46 @@ def im2col(x: Union[np.ndarray, cp.ndarray],
            strides: int = 1,
            depth_index: int = 3):
     batch_size, input_size, depth = get_input_dim(x, depth_index, 0)
-
+    xp_module = cp.get_array_module(x)
     output_shape = (input_size - filter_dim) // strides + 1
-    rows_iter = np.arange(0, input_size - filter_dim + 1, strides)
-    cols_iter = np.arange(0, input_size - filter_dim + 1, strides)
-    output = np.zeros((batch_size, output_shape * output_shape, filter_dim * filter_dim * depth))
+    mat_iter = xp_module.arange(0, input_size - filter_dim + 1, strides)
+    output = xp_module.zeros((batch_size, filter_dim * filter_dim * depth, output_shape * output_shape))
     window_index = 0
     sample_index = 0
     for sample in range(batch_size):
-        for row in rows_iter:
-            for col in cols_iter:
+        for row in mat_iter:
+            for col in mat_iter:
                 window = x[sample_index, row:row + filter_dim, col:col + filter_dim, :depth].reshape(-1)
-                output[sample_index, window_index, :] = window
+                output[sample_index, :, window_index] = window
                 window_index += 1
         window_index = 0
         sample_index += 1
     return output
 
 
-def col2im(x: Union[np.ndarray, cp.ndarray],
+def col2im(col_mat: Union[np.ndarray, cp.ndarray],
+           input_shape: Tuple,
            filter_dim: int = 3,
-           stride: int = 1):
-    pass
+           stride: int = 1,
+           padding: int = 0):
+    xp_module = cp.get_array_module(col_mat)
+    batch_size, height, width, depth = input_shape
+    output = xp_module.zeros(input_shape)
+    for batch in range(batch_size):
+        for window_index in range(len(col_mat.shape[2])):
+            window = col_mat[batch, :, window_index]
+            # for d in range(depth):
+            #     output[batch, , , d]
+
+
+
+# x = np.array([[[1, 2, 3, 4, 5],
+#                [6, 7, 8, 9, 10],
+#                [11, 12, 13, 14, 15],
+#                [16, 17, 18, 19, 20],
+#                [21, 22, 23, 24, 25]]])
+# x = x.reshape(1, 5, 5, 1)
+# print(x.shape)
+# out = im2col(x, 3, 2, 3)
+# print(out.shape)
+# print(out)

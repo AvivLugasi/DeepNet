@@ -10,7 +10,6 @@ from Initializers.Zeroes import Zeroes
 import cupy as cp
 import numpy as np
 from typing import Union, Literal
-
 from Optimizers.Optimizer import Optimizer
 from Regularization.Regularizer import Regularizer
 from Structures.Layers.BatchNorm import BatchNorm
