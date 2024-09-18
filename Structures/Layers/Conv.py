@@ -117,7 +117,6 @@ class Conv(Layer):
         output_size = int(output_size)
         if self.padding != 0:
             input_mat = self._add_padding(input_mat)
-        print(input_mat.shape)
         depth = input_mat.shape[self.input_depth_index]
         self.batch_size = input_mat.shape[self.samples_dim_index]
         self.input_mat_im2col = im2col(x=input_mat,
@@ -147,11 +146,11 @@ class Conv(Layer):
         self.update_weights(bias_gradients=d_b,
                             weights_gradients=d_w,
                             optimizer=optimizer)
-        # d_x = col2im(col_mat=d_x,
-        #              input_shape=self.input_dim,
-        #              filter_dim=self.filter_size,
-        #              stride=self.strides,
-        #              padding=self.padding)
+        d_x = col2im(col_mat=d_x,
+                     input_shape=self.input_dim,
+                     filter_dim=self.filter_size,
+                     stride=self.strides,
+                     padding=self.padding)
         return d_x
 
     def update_weights(self, **kwargs):
@@ -177,19 +176,3 @@ class Conv(Layer):
 
     def set_mod(self, *args, **kwargs):
         pass
-
-
-x = cp.random.randn(4, 32, 32, 3)
-conv = Conv(num_of_filters=3,
-            filter_size=3,
-            strides=1,
-            padding=1)
-
-x_forward = conv.forward_pass(x)
-print(x_forward[0])
-exp_d = ExponentialDecay(learning_rate=0.13,
-                         decay_steps=8000,
-                         decay_rate=0.95)
-sgd = SGD(momentum=0.9, init_learning_rate=exp_d)
-analyticall_gradient = conv.backward_pass(grads=1, optimizer=sgd)
-print(analyticall_gradient.shape)

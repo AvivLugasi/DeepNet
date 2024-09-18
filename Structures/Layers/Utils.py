@@ -83,23 +83,17 @@ def col2im(col_mat: Union[np.ndarray, cp.ndarray],
            stride: int = 1,
            padding: int = 0):
     xp_module = cp.get_array_module(col_mat)
-    batch_size, height, width, depth = input_shape
-    output = xp_module.zeros(input_shape)
-    for batch in range(batch_size):
-        for window_index in range(len(col_mat.shape[2])):
-            window = col_mat[batch, :, window_index]
-            # for d in range(depth):
-            #     output[batch, , , d]
+    batch_size, height, width, channels = input_shape
+    output = xp_module.zeros((batch_size, height + 2 * padding, width + 2 * padding, channels))
+    col_index = 0
+    for row in range(0, height + 2 * padding - filter_dim + 1, stride):
+        for col in range(0, width + 2 * padding - filter_dim + 1, stride):
+            window = col_mat[:, :, col_index]
+            filter_img_shape = (batch_size, filter_dim, filter_dim, channels)
+            output[:, row:row+filter_dim, col:col+filter_dim, :] += window.reshape(filter_img_shape)
+            col_index += 1
 
+    if padding > 0:
+        output = output[:, padding:-padding, padding:-padding, :]
 
-
-# x = np.array([[[1, 2, 3, 4, 5],
-#                [6, 7, 8, 9, 10],
-#                [11, 12, 13, 14, 15],
-#                [16, 17, 18, 19, 20],
-#                [21, 22, 23, 24, 25]]])
-# x = x.reshape(1, 5, 5, 1)
-# print(x.shape)
-# out = im2col(x, 3, 2, 3)
-# print(out.shape)
-# print(out)
+    return output
